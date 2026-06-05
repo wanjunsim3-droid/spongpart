@@ -406,8 +406,8 @@ header.scrolled {
 /* Features interactive section */
 .feature-layout {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 64px;
+  grid-template-columns: 1fr 1.1fr; /* 이미지 영역 너비 비중 확대 */
+  gap: 48px;
   align-items: center;
 }
 .feature-text-block {
@@ -455,8 +455,9 @@ header.scrolled {
   color: var(--text-primary);
 }
 .image-viewer {
-  aspect-ratio: 1/1;
-  padding: 24px;
+  aspect-ratio: 16/10; /* 가로로 긴 시원한 비율로 변경하여 우측 빈 여백을 가득 채움 */
+  padding: 16px;
+  width: 100%;
 }
 .feature-display-area {
   width: 100%;
