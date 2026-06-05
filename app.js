@@ -1,13 +1,14 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getDatabase, ref, set, push, onValue, remove, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
 
 // =========================================================================
 // Firebase 프로젝트 환경 설정 정보 (Config)
-// TODO: 사장님의 실제 Firebase 프로젝트 생성 후 하단의 값을 교체해 주세요!
 // =========================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyDx_p55uLN3shY5FwKyVqFd0q0bVMAJ3o8",
   authDomain: "spongpart-7dccd.firebaseapp.com",
+  databaseURL: "https://spongpart-7dccd-default-rtdb.firebaseio.com/",
   projectId: "spongpart-7dccd",
   storageBucket: "spongpart-7dccd.firebasestorage.app",
   messagingSenderId: "1004167039743",
@@ -16,6 +17,7 @@ const firebaseConfig = {
 };
 
 let authService = null;
+let db = null;
 let useFirebase = false;
 
 // Firebase 설정 값 유효성 체크 및 초기화
@@ -23,8 +25,9 @@ if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY" && firebas
   try {
     const app = initializeApp(firebaseConfig);
     authService = getAuth(app);
+    db = getDatabase(app);
     useFirebase = true;
-    console.log("Firebase Auth가 연동되었습니다.");
+    console.log("Firebase Auth 및 Realtime Database가 정상 연동되었습니다.");
   } catch (err) {
     console.error("Firebase 초기화 실패, 로컬 임시 인증 모드로 대체합니다:", err);
   }
@@ -484,6 +487,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const guests = document.getElementById('guest-count').value;
     const note = document.getElementById('booking-note').value || '없음';
     const summaryPrice = modalSummaryPrice.textContent;
+
+    // Realtime Database 예약 데이터 업로드
+    if (useFirebase && db) {
+      try {
+        const reservationsRef = ref(db, 'reservations');
+        const newResRef = push(reservationsRef);
+        set(newResRef, {
+          name: name,
+          phone: phone,
+          date: date,
+          guests: guests,
+          note: note,
+          price: summaryPrice,
+          status: "pending", // 초기 대기 중 상태
+          createdAt: new Date().toISOString()
+        });
+        console.log("예약 정보가 Realtime Database에 저장되었습니다.");
+      } catch (err) {
+        console.error("Realtime DB 저장 실패:", err);
+      }
+    } else {
+      // 로컬 가상 모드 백업 저장
+      let mockReservations = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
+      mockReservations.push({
+        name, phone, date, guests, note, price: summaryPrice, status: "pending", createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('mock_reservations', JSON.stringify(mockReservations));
+      // 로컬 달력 상태 갱신 이벤트 트리거
+      window.dispatchEvent(new Event('local-reservations-change'));
+    }
     
     // 클립보드에 복사할 정갈한 예약 템플릿 텍스트 생성
     const clipboardText = `[스폰지 파티룸 예약 신청서]
@@ -586,14 +619,50 @@ document.addEventListener('DOMContentLoaded', () => {
   const prevMonthBtn = document.getElementById('prev-month-btn');
   const nextMonthBtn = document.getElementById('next-month-btn');
 
-  // 예약 마감(완료) 날짜 목록 설정 (YYYY-MM-DD 형식)
-  // 사장님이 예약 완료 처리하고 싶은 날짜들을 여기에 추가하시면 됩니다.
-  const bookedDates = [
-    '2026-06-05', '2026-06-06', '2026-06-12', '2026-06-13', 
-    '2026-06-20', '2026-06-21', '2026-06-26', '2026-06-27'
+  // 예약 마감(완료) 날짜 목록 설정 (기본 수동 지정 날짜들)
+  const defaultBookedDates = [
+    '2026-06-12', '2026-06-13', '2026-06-20', '2026-06-21', '2026-06-26', '2026-06-27'
   ];
+  let dynamicBookedDates = []; // DB 또는 LocalStorage에서 로드된 예약 확정 날짜들
 
   let calendarDate = new Date(); // 달력에서 현재 가리키는 날짜 기준
+
+  // 실시간 예약일 정보 감지 및 연동
+  function syncBookedDates() {
+    if (useFirebase && db) {
+      try {
+        const reservationsRef = ref(db, 'reservations');
+        onValue(reservationsRef, (snapshot) => {
+          dynamicBookedDates = [];
+          const data = snapshot.val();
+          if (data) {
+            Object.values(data).forEach(res => {
+              if (res.status === "confirmed" && res.date) {
+                dynamicBookedDates.push(res.date);
+              }
+            });
+          }
+          renderCalendar();
+        });
+      } catch (err) {
+        console.error("실시간 예약 데이터 수신 실패:", err);
+      }
+    } else {
+      // 로컬 가상 예약 데이터 동기화
+      const syncLocal = () => {
+        dynamicBookedDates = [];
+        const localRes = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
+        localRes.forEach(res => {
+          if (res.status === "confirmed" && res.date) {
+            dynamicBookedDates.push(res.date);
+          }
+        });
+        renderCalendar();
+      };
+      syncLocal();
+      window.addEventListener('local-reservations-change', syncLocal);
+    }
+  }
 
   function renderCalendar() {
     if (!calendarDaysGrid || !currentMonthYearLabel) return;
@@ -611,6 +680,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    // 전체 예약 완료 리스트 = 기본 지정 날짜 + 실시간 로드된 날짜
+    const totalBookedDates = [...defaultBookedDates, ...dynamicBookedDates];
 
     // 1. 첫째 날 이전의 빈 셀 채우기
     for (let i = 0; i < firstDayIndex; i++) {
@@ -634,11 +706,11 @@ document.addEventListener('DOMContentLoaded', () => {
         dayCell.classList.add('today-cell');
       }
 
-      // 오늘 날짜 이전이거나 bookedDates 배열에 명시되어 있으면 '예약 완료'로 차단
+      // 오늘 날짜 이전이거나 totalBookedDates 배열에 명시되어 있으면 '예약 완료'로 차단
       const cellDateObj = new Date(currentYear, currentMonth, day);
       const todayDateObj = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-      if (cellDateObj < todayDateObj || bookedDates.includes(dateStr)) {
+      if (cellDateObj < todayDateObj || totalBookedDates.includes(dateStr)) {
         dayCell.classList.add('status-booked');
       } else {
         dayCell.classList.add('status-available');
@@ -676,6 +748,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 초기 렌더링
-  renderCalendar();
+  // 초기 렌더링 동기화 작동
+  syncBookedDates();
 });

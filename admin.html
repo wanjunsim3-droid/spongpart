@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스폰지 파티룸 | 예약 관리자 대시보드</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Admin Styles -->
+  <style>
+    :root {
+      --bg-primary: #0b0716;
+      --bg-secondary: #130c25;
+      --bg-tertiary: #1b1033;
+      --accent-purple: #9d4edd;
+      --accent-gold: #ffb703;
+      --accent-magenta: #e0aaff;
+      --text-primary: #f8f7f9;
+      --text-secondary: #b5aebf;
+      --border-glass: rgba(157, 78, 221, 0.15);
+      --bg-glass: rgba(19, 12, 37, 0.65);
+      --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Outfit', 'Noto Sans KR', sans-serif;
+      color: var(--text-primary);
+    }
+    
+    body {
+      background-color: var(--bg-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Background Blur Orbs */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      z-index: -1;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .orb-1 {
+      width: 40vw;
+      height: 40vw;
+      background: radial-gradient(circle, var(--accent-purple) 0%, rgba(157, 78, 221, 0) 70%);
+      top: -10%;
+      right: -10%;
+    }
+    .orb-2 {
+      width: 45vw;
+      height: 45vw;
+      background: radial-gradient(circle, var(--bg-tertiary) 0%, rgba(27, 16, 51, 0) 70%);
+      bottom: -10%;
+      left: -10%;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    
+    .glass-card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid var(--border-glass);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    
+    /* Header */
+    header {
+      background: rgba(11, 7, 22, 0.85);
+      border-bottom: 1px solid rgba(157, 78, 221, 0.15);
+      padding: 20px 0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+    }
+    .header-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, var(--accent-purple) 20%, var(--accent-magenta) 50%, var(--accent-gold) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition-smooth);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-purple) 0%, #7b2cbf 100%);
+    }
+    .btn-primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-2px);
+    }
+    
+    /* Login Overlay */
+    .login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg-primary);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.4s ease;
+    }
+    .login-box {
+      width: 100%;
+      max-width: 400px;
+      padding: 40px;
+      text-align: center;
+    }
+    .login-box h2 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .login-box p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-align: left;
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+    .form-group input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      outline: none;
+      transition: var(--transition-smooth);
+    }
+    .form-group input:focus {
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 10px rgba(157, 78, 221, 0.25);
+    }
+    .btn-block {
+      width: 100%;
+      justify-content: center;
+      padding: 14px;
+    }
+    
+    /* Dashboard Content */
+    main {
+      padding: 40px 0;
+      flex-grow: 1;
+    }
+    
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .stat-card {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .stat-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: 800;
+    }
+    .stat-value span.price-sign {
+      font-size: 20px;
+      color: var(--accent-gold);
+    }
+    
+    /* Table Wrapper */
+    .table-section {
+      padding: 32px;
+    }
+    .section-title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .section-title-bar h2 {
+      font-size: 22px;
+      font-weight: 800;
+    }
+    
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      min-width: 900px;
+    }
+    th {
+      padding: 16px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    td {
+      padding: 18px 16px;
+      font-size: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      vertical-align: middle;
+    }
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    
+    /* Badge status styles */
+    .status-badge {
+      display: inline-flex;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .status-badge.pending {
+      background: rgba(255, 183, 3, 0.15);
+      color: var(--accent-gold);
+      border: 1px solid rgba(255, 183, 3, 0.25);
+    }
+    .status-badge.confirmed {
+      background: rgba(6, 214, 160, 0.15);
+      color: #06d6a0;
+      border: 1px solid rgba(6, 214, 160, 0.25);
+    }
+    
+    .action-btn-group {
+      display: flex;
+      gap: 8px;
+    }
+    .action-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition-smooth);
+    }
+    .action-btn.confirm {
+      background: rgba(6, 214, 160, 0.2);
+      color: #06d6a0;
+      border: 1px solid rgba(6, 214, 160, 0.3);
+    }
+    .action-btn.confirm:hover {
+      background: #06d6a0;
+      color: var(--bg-primary);
+    }
+    .action-btn.delete {
+      background: rgba(239, 71, 111, 0.2);
+      color: #ef476f;
+      border: 1px solid rgba(239, 71, 111, 0.3);
+    }
+    .action-btn.delete:hover {
+      background: #ef476f;
+      color: var(--text-primary);
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 0;
+      color: var(--text-secondary);
+    }
+    .empty-state i {
+      font-size: 48px;
+      margin-bottom: 16px;
+      color: rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Footer */
+    footer {
+      background: #06040d;
+      border-top: 1px solid rgba(157, 78, 221, 0.1);
+      padding: 30px 0;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <!-- Admin Login Overlay (사장님만 접근 가능) -->
+  <div id="admin-login-overlay" class="login-overlay">
+    <div class="glass-card login-box">
+      <h2>스폰지 파티룸 <span class="gradient-text">관리자 로그인</span></h2>
+      <p>보안 구역입니다. 등록된 관리자 계정으로 로그인해 주세요.</p>
+      <form id="admin-login-form">
+        <div class="form-group">
+          <label for="admin-email">이메일 주소</label>
+          <input type="email" id="admin-email" required placeholder="admin@email.com">
+        </div>
+        <div class="form-group">
+          <label for="admin-password">비밀번호</label>
+          <input type="password" id="admin-password" required placeholder="비밀번호 입력">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">관리자 대시보드 진입</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="container header-container">
+      <a href="./" class="logo">
+        <span class="gradient-text">SPONGE</span> ADMIN
+      </a>
+      <div id="admin-info-badge" style="display: flex; align-items: center; gap: 16px;">
+        <span style="font-size: 14px; font-weight: 600;"><i class="fa-solid fa-user-shield"></i> 관리자(사장님)</span>
+        <button id="btn-admin-logout" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-right-from-bracket"></i> 로그아웃</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Dashboard -->
+  <main class="container">
+    
+    <!-- Stats Cards Row -->
+    <div class="stats-row">
+      <div class="glass-card stat-card">
+        <span class="stat-title">총 예약 신청</span>
+        <span id="stat-total" class="stat-value">0</span>
+      </div>
+      <div class="glass-card stat-card">
+        <span class="stat-title">대기 중인 예약</span>
+        <span id="stat-pending" class="stat-value" style="color: var(--accent-gold);">0</span>
+      </div>
+      <div class="glass-card stat-card">
+        <span class="stat-title">확정된 예약</span>
+        <span id="stat-confirmed" class="stat-value" style="color: #06d6a0;">0</span>
+      </div>
+      <div class="glass-card stat-card">
+        <span class="stat-title">이번 달 예상 매출</span>
+        <span class="stat-value"><span class="price-sign">₩</span><span id="stat-sales">0</span></span>
+      </div>
+    </div>
+
+    <!-- Reservations Table -->
+    <section class="glass-card table-section">
+      <div class="section-title-bar">
+        <h2>실시간 예약 신청 목록</h2>
+        <button id="btn-refresh-list" class="btn btn-secondary btn-sm"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+      </div>
+      
+      <div class="table-container">
+        <table id="reservations-table">
+          <thead>
+            <tr>
+              <th>이용 희망 날짜</th>
+              <th>신청자(이메일)</th>
+              <th>연락처</th>
+              <th>이용 인원</th>
+              <th>예상 금액</th>
+              <th>추가 요청 사항</th>
+              <th>접수 일시</th>
+              <th>상태</th>
+              <th>관리 조치</th>
+            </tr>
+          </thead>
+          <tbody id="reservations-list-body">
+            <!-- Dynamic list generated by script -->
+          </tbody>
+        </table>
+        
+        <div id="table-empty-state" class="empty-state" style="display: none;">
+          <i class="fa-solid fa-inbox"></i>
+          <p>접수된 예약 내역이 아직 존재하지 않습니다.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <p>© 2026 Gwangmyeong Cheolsan Sponge Partyroom Administrator Panel. All rights reserved.</p>
+  </footer>
+
+  <!-- Firebase Scripts -->
+  <script type="module" src="./admin.js"></script>
+</body>
+</html>
