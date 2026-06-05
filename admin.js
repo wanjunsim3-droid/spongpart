@@ -75,14 +75,14 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(`로그인 실패: 비밀번호 또는 계정 정보를 다시 확인하세요. (${err.message})`);
           });
       } else {
-        // 로컬 목업 가상 관리자 로그인
-        if (password === "admin123") {
+        // 로컬 목업 가상 관리자 로그인 (한글 'ㅁㄴ913689' 및 영타 'as913689' 호환 처리)
+        if (password === "ㅁㄴ913689" || password === "as913689") {
           alert("🔓 가상 관리자 대시보드로 진입합니다 (가상 로컬 모드)");
           localStorage.setItem('admin_logged_in', 'true');
           loginOverlay.style.display = 'none';
           loadReservations();
         } else {
-          alert("패스워드가 잘못되었습니다. (가상 모드 비밀번호: admin123)");
+          alert("패스워드가 잘못되었습니다. (가상 모드 비밀번호: ㅁㄴ913689)");
         }
       }
     });
