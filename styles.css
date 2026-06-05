@@ -252,12 +252,14 @@ header.scrolled {
   font-weight: 900;
   line-height: 1.2;
   margin-bottom: 24px;
+  text-align: center;
 }
 .hero-desc {
   font-size: 18px;
   line-height: 1.6;
   color: var(--text-secondary);
   margin-bottom: 32px;
+  text-align: center;
 }
 .hero-btns {
   display: flex;
@@ -1010,7 +1012,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 /* Responsive CSS */
 @media (max-width: 992px) {
   #hero h1 { font-size: 40px; }
-  .hero-container { grid-template-columns: 1fr; gap: 48px; }
   .intro-grid { grid-template-columns: 1fr; }
   .feature-layout { grid-template-columns: 1fr; }
   .price-cards { grid-template-columns: 1fr; }
