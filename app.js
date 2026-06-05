@@ -619,10 +619,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const prevMonthBtn = document.getElementById('prev-month-btn');
   const nextMonthBtn = document.getElementById('next-month-btn');
 
-  // 예약 마감(완료) 날짜 목록 설정 (기본 수동 지정 날짜들)
-  const defaultBookedDates = [
-    '2026-06-12', '2026-06-13', '2026-06-20', '2026-06-21', '2026-06-26', '2026-06-27'
-  ];
+  // 예약 마감(완료) 날짜 목록 설정 (기본 수동 지정 날짜들 제거 - DB로 일원화)
+  const defaultBookedDates = [];
   let dynamicBookedDates = []; // DB 또는 LocalStorage에서 로드된 예약 확정 날짜들
 
   let calendarDate = new Date(); // 달력에서 현재 가리키는 날짜 기준
