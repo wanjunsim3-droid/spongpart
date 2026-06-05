@@ -1240,3 +1240,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     width: 100%;
   }
 }
+/* 로그인 기능 임시 비활성화 (화면에서 가림) */
+#btn-auth-toggle {
+  display: none !important;
+}
