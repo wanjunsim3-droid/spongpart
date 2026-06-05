@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { getDatabase, ref, onValue, remove, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+import { getDatabase, ref, onValue, remove, update, set, push } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
 
 // =========================================================================
 // Firebase 프로젝트 환경 설정 정보 (Config)
@@ -49,6 +49,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const statPending = document.getElementById('stat-pending');
   const statConfirmed = document.getElementById('stat-confirmed');
   const statSales = document.getElementById('stat-sales');
+
+  // Admin Calendar Elements
+  const adminPrevMonthBtn = document.getElementById('admin-prev-month-btn');
+  const adminNextMonthBtn = document.getElementById('admin-next-month-btn');
+  const adminCurrentMonthYear = document.getElementById('admin-current-month-year');
+  const adminCalendarDaysGrid = document.getElementById('admin-calendar-days-grid');
+
+  let adminCalendarDate = new Date();
+  let latestReservationsData = null; // 실시간 캘린더용 캐시 데이터
 
   let activeReservationsListener = null;
 
@@ -144,6 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderReservations(data) {
     if (!reservationsBody) return;
     reservationsBody.innerHTML = '';
+
+    // 실시간 달력 렌더링용 최신 데이터 캐싱 및 달력 호출
+    latestReservationsData = data;
+    renderAdminCalendar();
 
     if (!data || Object.keys(data).length === 0) {
       emptyState.style.display = 'block';
@@ -396,6 +409,181 @@ document.addEventListener('DOMContentLoaded', () => {
       loadReservations();
     } else {
       loginOverlay.style.display = 'flex';
+    }
+  }
+
+  // =========================================================================
+  // 관리자 예약 통제 달력 구현부
+  // =========================================================================
+
+  // 이전 달/다음 달 이동 이벤트 리스너
+  if (adminPrevMonthBtn) {
+    adminPrevMonthBtn.addEventListener('click', () => {
+      adminCalendarDate.setMonth(adminCalendarDate.getMonth() - 1);
+      renderAdminCalendar();
+    });
+  }
+  if (adminNextMonthBtn) {
+    adminNextMonthBtn.addEventListener('click', () => {
+      adminCalendarDate.setMonth(adminCalendarDate.getMonth() + 1);
+      renderAdminCalendar();
+    });
+  }
+
+  // 관리자 달력 렌더링 함수
+  function renderAdminCalendar() {
+    if (!adminCalendarDaysGrid || !adminCurrentMonthYear) return;
+
+    adminCalendarDaysGrid.innerHTML = '';
+    const currentYear = adminCalendarDate.getFullYear();
+    const currentMonth = adminCalendarDate.getMonth();
+
+    adminCurrentMonthYear.textContent = `${currentYear}년 ${currentMonth + 1}월`;
+
+    const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+    const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    // 1. 첫째 날 이전의 빈 셀 채우기
+    for (let i = 0; i < firstDayIndex; i++) {
+      const emptyCell = document.createElement('div');
+      emptyCell.className = 'calendar-day-cell empty-cell';
+      adminCalendarDaysGrid.appendChild(emptyCell);
+    }
+
+    // 2. 일자별 셀 생성 및 예약 연동
+    for (let day = 1; day <= lastDate; day++) {
+      const dayCell = document.createElement('div');
+      dayCell.className = 'calendar-day-cell';
+      dayCell.textContent = day;
+
+      const formattedMonth = String(currentMonth + 1).padStart(2, '0');
+      const formattedDay = String(day).padStart(2, '0');
+      const dateStr = `${currentYear}-${formattedMonth}-${formattedDay}`;
+
+      // 오늘 날짜인지 체크
+      if (dateStr === todayStr) {
+        dayCell.classList.add('today-cell');
+      }
+
+      // 해당 날짜 예약 상태 파악
+      let foundBooking = null;
+      if (latestReservationsData) {
+        Object.entries(latestReservationsData).forEach(([key, val]) => {
+          if (val.date === dateStr && val.status === 'confirmed') {
+            foundBooking = { key, ...val };
+          }
+        });
+      }
+
+      // 오늘 날짜 이전 체크 (과거 날짜는 차단 불가)
+      const cellDateObj = new Date(currentYear, currentMonth, day);
+      const todayDateObj = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const isPast = cellDateObj < todayDateObj;
+
+      if (foundBooking) {
+        if (foundBooking.name === '[수동 마감]') {
+          dayCell.classList.add('status-manual-booked');
+        } else {
+          dayCell.classList.add('status-confirmed');
+        }
+      } else {
+        dayCell.classList.add('status-available');
+      }
+
+      // 클릭 리스너 설정
+      dayCell.addEventListener('click', () => {
+        handleAdminCalendarClick(dateStr, foundBooking, isPast);
+      });
+
+      adminCalendarDaysGrid.appendChild(dayCell);
+    }
+  }
+
+  // 관리자 달력 클릭 핸들러
+  function handleAdminCalendarClick(dateStr, booking, isPast) {
+    if (isPast) {
+      alert("⚠️ 지난 날짜는 수동 예약을 마감하거나 해제하실 수 없습니다.");
+      return;
+    }
+
+    if (booking) {
+      if (booking.name === '[수동 마감]') {
+        if (confirm(`🔓 [${dateStr}] 날짜의 수동 예약을 해제하시겠습니까?\n해제하시면 다시 일반 고객이 예약할 수 있는 상태로 복원됩니다.`)) {
+          deleteReservationWithoutConfirm(booking.key);
+        }
+      } else {
+        alert(`🚨 [${dateStr}] 날짜는 이미 일반 고객(${booking.name}님) 예약이 최종 확정되어 마감되었습니다.\n\n해제를 원하시는 경우 하단 예약 목록에서 직접 [보류] 또는 [삭제]로 조치해 주세요.`);
+      }
+    } else {
+      if (confirm(`🔒 [${dateStr}] 날짜를 수동으로 예약 마감(차단)하시겠습니까?\n마감 시 메인 홈페이지 달력에서도 '예약 완료'로 블로킹되어 일반 고객 신청이 차단됩니다.`)) {
+        createManualBlockReservation(dateStr);
+      }
+    }
+  }
+
+  // 수동 마감용 예약 데이터 생성
+  function createManualBlockReservation(dateStr) {
+    const manualData = {
+      name: "[수동 마감]",
+      phone: "-",
+      date: dateStr,
+      guests: "0",
+      note: "관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.",
+      price: "0",
+      status: "confirmed",
+      createdAt: new Date().toISOString()
+    };
+
+    if (useFirebase && db) {
+      try {
+        const reservationsRef = ref(db, 'reservations');
+        const newResRef = push(reservationsRef);
+        set(newResRef, manualData)
+          .then(() => {
+            alert("🔒 해당 날짜가 수동으로 예약 마감되었습니다.");
+          })
+          .catch(err => alert("마감 설정 실패: " + err.message));
+      } catch (err) {
+        alert("DB 처리 오류: " + err.message);
+      }
+    } else {
+      // 로컬 목업 모드 가상 마감 처리
+      let localRes = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
+      localRes.push(manualData);
+      localStorage.setItem('mock_reservations', JSON.stringify(localRes));
+      window.dispatchEvent(new Event('local-reservations-change'));
+      alert("🔒 해당 날짜가 수동으로 예약 마감되었습니다 (가상 모드).");
+      loadReservations();
+    }
+  }
+
+  // 알림창 확인 없이 수동 예약 삭제(해제) 처리
+  function deleteReservationWithoutConfirm(key) {
+    if (useFirebase && db) {
+      try {
+        const targetRef = ref(db, `reservations/${key}`);
+        remove(targetRef)
+          .then(() => {
+            alert("✅ 해당 날짜의 수동 예약 마감이 해제되었습니다.");
+          })
+          .catch(err => alert("해제 실패: " + err.message));
+      } catch (err) {
+        alert("DB 처리 오류: " + err.message);
+      }
+    } else {
+      // 로컬 목업 모드 해제 처리
+      let localRes = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
+      const index = parseInt(key.replace('mock_key_', ''), 10);
+      if (index >= 0 && index < localRes.length) {
+        localRes.splice(index, 1);
+        localStorage.setItem('mock_reservations', JSON.stringify(localRes));
+        window.dispatchEvent(new Event('local-reservations-change'));
+        alert("✅ 해당 날짜의 수동 예약 마감이 해제되었습니다 (가상 모드).");
+        loadReservations();
+      }
     }
   }
 });
