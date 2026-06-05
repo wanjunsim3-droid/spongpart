@@ -539,4 +539,42 @@ document.addEventListener('DOMContentLoaded', () => {
       heroSlides[currentSlideIndex].classList.add('active');
     }, 4000); // 4초 간격 페이드
   }
+
+  // =========================================================================
+  // 6. 모바일 메뉴 (햄버거 버튼) 토글 및 링크 자동 닫기
+  // =========================================================================
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const mobileNav = document.getElementById('mobile-nav');
+  const mobileNavItems = document.querySelectorAll('.mobile-nav-item');
+
+  if (mobileMenuBtn && mobileNav) {
+    mobileMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      mobileNav.classList.toggle('active');
+      const icon = mobileMenuBtn.querySelector('i');
+      if (mobileNav.classList.contains('active')) {
+        icon.className = 'fa-solid fa-xmark';
+      } else {
+        icon.className = 'fa-solid fa-bars';
+      }
+    });
+
+    // 외부 영역 클릭 시 드롭다운 닫기
+    document.addEventListener('click', (e) => {
+      if (!mobileNav.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+        mobileNav.classList.remove('active');
+        const icon = mobileMenuBtn.querySelector('i');
+        if (icon) icon.className = 'fa-solid fa-bars';
+      }
+    });
+
+    // 메뉴 항목 선택 시 자동으로 메뉴 닫기
+    mobileNavItems.forEach(item => {
+      item.addEventListener('click', () => {
+        mobileNav.classList.remove('active');
+        const icon = mobileMenuBtn.querySelector('i');
+        if (icon) icon.className = 'fa-solid fa-bars';
+      });
+    });
+  }
 });
