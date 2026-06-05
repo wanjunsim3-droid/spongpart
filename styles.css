@@ -218,22 +218,24 @@ header.scrolled {
 
 /* Hero Section */
 #hero {
-  padding-top: 180px;
-  padding-bottom: 80px;
+  padding-top: 150px; /* 상단 패딩 축소로 첫 화면 노출 영역 확대 */
+  padding-bottom: 60px;
   position: relative;
 }
 .hero-container {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr; /* 2열 구조로 컴팩트하게 재배치 */
+  gap: 40px; /* 좌우 휑한 공백 차단을 위해 간격 축소 */
   align-items: center;
-  text-align: center;
-  gap: 48px;
+  max-width: 1020px; /* 전체 컨테이너 너비를 좁혀 화면 가운데로 모음 */
+  margin: 0 auto;
+  text-align: left;
 }
 .hero-content {
-  max-width: 800px;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start; /* 좌측 정렬 복원 */
 }
 .badge {
   display: inline-block;
@@ -244,36 +246,35 @@ header.scrolled {
   font-size: 13px;
   font-weight: 600;
   color: var(--accent-magenta);
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   width: fit-content;
 }
 #hero h1 {
-  font-size: 54px;
+  font-size: 44px; /* 글자 크기 최적화 */
   font-weight: 900;
-  line-height: 1.2;
-  margin-bottom: 24px;
-  text-align: center;
+  line-height: 1.25;
+  margin-bottom: 20px;
+  text-align: left; /* 좌측 정렬 */
 }
 .hero-desc {
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1.6;
   color: var(--text-secondary);
   margin-bottom: 32px;
-  text-align: center;
+  text-align: left; /* 좌측 정렬 */
 }
 .hero-btns {
   display: flex;
-  justify-content: center;
-  gap: 16px;
+  justify-content: flex-start;
+  gap: 12px;
 }
 .hero-visual {
   width: 100%;
-  max-width: 850px;
-  margin: 0 auto;
+  max-width: 440px; /* 이미지 너비 한정 */
 }
 .visual-card {
-  padding: 16px;
-  aspect-ratio: 16/9; /* 와이드 가로 비율로 더 크게 센터링 */
+  padding: 12px;
+  aspect-ratio: 4/3; /* 높이를 낮춰 한 화면에 다 들어오도록 복원 */
   display: flex;
   flex-direction: column;
 }
@@ -1011,7 +1012,23 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 /* Responsive CSS */
 @media (max-width: 992px) {
-  #hero h1 { font-size: 40px; }
+  #hero h1 { font-size: 36px; }
+  .hero-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 32px;
+  }
+  .hero-content {
+    align-items: center;
+  }
+  #hero h1, .hero-desc {
+    text-align: center;
+  }
+  .hero-btns {
+    justify-content: center;
+  }
   .intro-grid { grid-template-columns: 1fr; }
   .feature-layout { grid-template-columns: 1fr; }
   .price-cards { grid-template-columns: 1fr; }
