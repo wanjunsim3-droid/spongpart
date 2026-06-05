@@ -1045,3 +1045,67 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     grid-template-columns: 1fr;
   }
 }
+/* Instagram Grid Styles */
+.instagram-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+.instagram-item {
+  aspect-ratio: 1/1;
+  padding: 0;
+  border-radius: 16px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  display: block;
+}
+.instagram-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: var(--transition-smooth);
+}
+.instagram-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(11, 7, 22, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  opacity: 0;
+  transition: var(--transition-smooth);
+  z-index: 2;
+  backdrop-filter: blur(2px);
+}
+.instagram-overlay span {
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.instagram-overlay span i {
+  color: var(--accent-magenta);
+}
+.instagram-item:hover img {
+  transform: scale(1.08);
+}
+.instagram-item:hover .instagram-overlay {
+  opacity: 1;
+}
+
+@media (max-width: 992px) {
+  .instagram-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .instagram-grid {
+    grid-template-columns: 1fr;
+  }
+}
