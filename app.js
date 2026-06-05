@@ -577,4 +577,105 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  // =========================================================================
+  // 7. 실시간 예약 현황 달력 동적 렌더링 및 모달 연동
+  // =========================================================================
+  const calendarDaysGrid = document.getElementById('calendar-days-grid');
+  const currentMonthYearLabel = document.getElementById('current-month-year');
+  const prevMonthBtn = document.getElementById('prev-month-btn');
+  const nextMonthBtn = document.getElementById('next-month-btn');
+
+  // 예약 마감(완료) 날짜 목록 설정 (YYYY-MM-DD 형식)
+  // 사장님이 예약 완료 처리하고 싶은 날짜들을 여기에 추가하시면 됩니다.
+  const bookedDates = [
+    '2026-06-05', '2026-06-06', '2026-06-12', '2026-06-13', 
+    '2026-06-20', '2026-06-21', '2026-06-26', '2026-06-27'
+  ];
+
+  let calendarDate = new Date(); // 달력에서 현재 가리키는 날짜 기준
+
+  function renderCalendar() {
+    if (!calendarDaysGrid || !currentMonthYearLabel) return;
+
+    calendarDaysGrid.innerHTML = '';
+    const currentYear = calendarDate.getFullYear();
+    const currentMonth = calendarDate.getMonth(); // 0 ~ 11
+
+    // 헤더 연/월 표시 업데이트
+    currentMonthYearLabel.textContent = `${currentYear}년 ${currentMonth + 1}월`;
+
+    // 이번 달의 첫째 날과 마지막 날 정보
+    const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); // 요일 인덱스 (0:일 ~ 6:토)
+    const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate(); // 이번 달 마지막 날짜
+
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    // 1. 첫째 날 이전의 빈 셀 채우기
+    for (let i = 0; i < firstDayIndex; i++) {
+      const emptyCell = document.createElement('div');
+      emptyCell.className = 'calendar-day-cell empty-cell';
+      calendarDaysGrid.appendChild(emptyCell);
+    }
+
+    // 2. 일자별 셀 생성 및 예약 연동
+    for (let day = 1; day <= lastDate; day++) {
+      const dayCell = document.createElement('div');
+      dayCell.className = 'calendar-day-cell';
+      dayCell.textContent = day;
+
+      const formattedMonth = String(currentMonth + 1).padStart(2, '0');
+      const formattedDay = String(day).padStart(2, '0');
+      const dateStr = `${currentYear}-${formattedMonth}-${formattedDay}`;
+
+      // 오늘 날짜인지 체크
+      if (dateStr === todayStr) {
+        dayCell.classList.add('today-cell');
+      }
+
+      // 오늘 날짜 이전이거나 bookedDates 배열에 명시되어 있으면 '예약 완료'로 차단
+      const cellDateObj = new Date(currentYear, currentMonth, day);
+      const todayDateObj = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      if (cellDateObj < todayDateObj || bookedDates.includes(dateStr)) {
+        dayCell.classList.add('status-booked');
+      } else {
+        dayCell.classList.add('status-available');
+        
+        // 예약 가능 날짜 클릭 시 모달창 자동 입력 및 띄우기
+        dayCell.addEventListener('click', () => {
+          const bookingDateInput = document.getElementById('booking-date');
+          const bookingModal = document.getElementById('booking-modal');
+          
+          if (bookingDateInput) {
+            bookingDateInput.value = dateStr;
+          }
+          if (bookingModal) {
+            bookingModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+          }
+        });
+      }
+
+      calendarDaysGrid.appendChild(dayCell);
+    }
+  }
+
+  // 이전 달/다음 달 버튼 이벤트
+  if (prevMonthBtn) {
+    prevMonthBtn.addEventListener('click', () => {
+      calendarDate.setMonth(calendarDate.getMonth() - 1);
+      renderCalendar();
+    });
+  }
+  if (nextMonthBtn) {
+    nextMonthBtn.addEventListener('click', () => {
+      calendarDate.setMonth(calendarDate.getMonth() + 1);
+      renderCalendar();
+    });
+  }
+
+  // 초기 렌더링
+  renderCalendar();
 });

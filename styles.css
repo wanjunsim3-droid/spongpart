@@ -1244,3 +1244,140 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 #btn-auth-toggle {
   display: none !important;
 }
+/* Reservation Calendar Styles */
+.calendar-wrapper-container {
+  max-width: 750px;
+  margin: 0 auto;
+  padding: 32px;
+}
+.calendar-ctrl-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.calendar-ctrl-header h3 {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 12px;
+}
+.weekday {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.weekday.sun {
+  color: #ef476f;
+}
+.weekday.sat {
+  color: #118ab2;
+}
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.calendar-day-cell {
+  aspect-ratio: 1/1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  position: relative;
+  transition: var(--transition-smooth);
+  border: 1px solid transparent;
+}
+.calendar-day-cell.empty-cell {
+  pointer-events: none;
+}
+.calendar-day-cell.status-booked {
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.02);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+.calendar-day-cell.status-booked::after {
+  content: '예약 완료';
+  position: absolute;
+  bottom: 6px;
+  font-size: 9px;
+  text-decoration: none !important;
+  color: #ef476f;
+  font-weight: 700;
+}
+.calendar-day-cell.status-available {
+  background: rgba(157, 78, 221, 0.05);
+  border-color: rgba(157, 78, 221, 0.15);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.calendar-day-cell.status-available::after {
+  content: '예약 가능';
+  position: absolute;
+  bottom: 6px;
+  font-size: 9px;
+  color: var(--accent-gold);
+  font-weight: 700;
+}
+.calendar-day-cell.status-available:hover {
+  background: rgba(157, 78, 221, 0.2);
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 15px rgba(157, 78, 221, 0.4);
+  transform: translateY(-2px);
+}
+.calendar-day-cell.today-cell {
+  border-color: var(--accent-gold);
+}
+.calendar-legend {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 20px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.legend-dot.available {
+  background-color: var(--accent-gold);
+  box-shadow: 0 0 8px var(--accent-gold);
+}
+.legend-dot.booked {
+  background-color: #ef476f;
+}
+
+@media (max-width: 600px) {
+  .calendar-wrapper-container {
+    padding: 16px;
+  }
+  .calendar-day-cell {
+    font-size: 13px;
+    border-radius: 8px;
+  }
+  .calendar-day-cell::after {
+    font-size: 8px;
+    bottom: 3px;
+  }
+}

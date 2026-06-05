@@ -308,6 +308,48 @@
     </div>
   </section>
 
+  <!-- Reservation Calendar Status Section -->
+  <section id="calendar-status" class="section-padding" style="border-top: 1px solid rgba(157, 78, 221, 0.1);">
+    <div class="container">
+      <div class="section-header">
+        <span class="sub-title"><i class="fa-solid fa-calendar-days"></i> AVAILABILITY</span>
+        <h2>실시간 예약 현황 달력</h2>
+        <p>원하는 날짜를 클릭하시면 즉시 예약 신청 화면으로 연결됩니다.</p>
+      </div>
+      
+      <div class="calendar-wrapper-container glass-card">
+        <!-- Calendar Control Header -->
+        <div class="calendar-ctrl-header">
+          <button id="prev-month-btn" class="btn btn-secondary btn-sm" aria-label="이전 달"><i class="fa-solid fa-chevron-left"></i></button>
+          <h3 id="current-month-year">2026년 6월</h3>
+          <button id="next-month-btn" class="btn btn-secondary btn-sm" aria-label="다음 달"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        
+        <!-- Weekdays Header -->
+        <div class="calendar-weekdays">
+          <div class="weekday sun">일</div>
+          <div class="weekday">월</div>
+          <div class="weekday">화</div>
+          <div class="weekday">수</div>
+          <div class="weekday">목</div>
+          <div class="weekday">금</div>
+          <div class="weekday sat">토</div>
+        </div>
+        
+        <!-- Days Grid -->
+        <div id="calendar-days-grid" class="calendar-days-grid">
+          <!-- Dynamically generated via JS -->
+        </div>
+        
+        <!-- Calendar Legend -->
+        <div class="calendar-legend">
+          <span class="legend-item"><span class="legend-dot available"></span> 예약 가능</span>
+          <span class="legend-item"><span class="legend-dot booked"></span> 예약 완료 (선택 불가)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Location Section -->
   <section id="location" class="section-padding">
     <div class="container">
