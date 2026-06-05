@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>광명 철산 스폰지 파티룸 | 프리미엄 공간 대여</title>
+  <meta name="description" content="철산역 상업지구 중심, 80평 단독 사용 최신 노래방 기기 무료! 소중한 가족, 연인과 함께 특별한 와인 파티와 두뇌 게임을 즐기세요.">
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="광명 철산 스폰지 파티룸">
+  <meta property="og:description" content="80평 단독 사용, 노래방 기기 무료 이용, 프라이빗 와인 파티 공간!">
+  <meta property="og:site_name" content="스폰지 파티룸">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Style Sheet -->
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+  <!-- Background Blur Orbs -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <!-- Header -->
+  <header id="header">
+    <div class="container header-container">
+      <a href="#" class="logo">
+        <span class="gradient-text">SPONGE</span> PARTROOM
+      </a>
+      <nav class="nav-links">
+        <a href="#intro" class="nav-item">소개</a>
+        <a href="#gallery" class="nav-item">갤러리</a>
+        <a href="#features" class="nav-item">공간 특징</a>
+        <a href="#pricing" class="nav-item">이용요금</a>
+        <a href="#calculator" class="nav-item">요금 계산기</a>
+        <a href="#location" class="nav-item">오시는 길</a>
+      </nav>
+      <div class="header-right-group">
+        <div id="user-profile-badge" class="user-profile-badge" style="display: none;">
+          <i class="fa-solid fa-circle-user"></i>
+          <span id="user-nickname-display">예약자</span>님
+        </div>
+        <button id="btn-auth-toggle" class="btn btn-secondary btn-sm">로그인 / 가입</button>
+        <button class="btn btn-primary btn-booking-trigger">실시간 예약</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="hero">
+    <div class="container hero-container">
+      <div class="hero-content">
+        <span class="badge">철산역 도보 1분 80평 단독 사용</span>
+        <h1>특별한 사람들과<br>더욱 <span class="gradient-text">빛나는 순간</span>을</h1>
+        <p class="hero-desc">
+          초대형 프리미엄 단독 대여 파티룸 '스폰지'에서 무료 최신 노래방 기기, 프라이빗 와인바, 다채로운 두뇌 게임과 함께 잊지 못할 추억을 만들어보세요.
+        </p>
+        <div class="hero-btns">
+          <button class="btn btn-primary btn-booking-trigger">예약 신청하기</button>
+          <a href="#calculator" class="btn btn-secondary">요금 계산해보기</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="glass-card visual-card">
+          <div class="visual-header">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <div class="visual-image-slider">
+            <div class="slide active" style="background-image: url('./images/photo_29.png');"></div>
+            <div class="slide" style="background-image: url('./images/photo_3.jpg');"></div>
+            <div class="slide" style="background-image: url('./images/photo_5.jpg');"></div>
+            <div class="visual-text">
+              <h3>SPONGE PREMIUM</h3>
+              <p>철산동 최고의 장소대여 브랜드</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Intro Section -->
+  <section id="intro" class="section-padding">
+    <div class="container">
+      <div class="section-header">
+        <span class="sub-title">ABOUT SPONGE</span>
+        <h2>소중한 만남을 위한 단 하나의 공간</h2>
+      </div>
+      <div class="intro-grid">
+        <div class="glass-card intro-card">
+          <div class="card-icon"><i class="fa-solid fa-arrows-maximize"></i></div>
+          <h3>80평 초대형 단독 대여</h3>
+          <p>다른 손님들과 섞이지 않고 오직 우리 팀만을 위한 프라이빗하고 넓은 공간을 자랑합니다.</p>
+        </div>
+        <div class="glass-card intro-card">
+          <div class="card-icon"><i class="fa-solid fa-microphone-lines"></i></div>
+          <h3>최신 노래방 무료 기기</h3>
+          <p>고급 음향 장비와 최신 인기곡이 완벽 지원되는 노래방 기기를 요금 추가 없이 무제한 이용할 수 있습니다.</p>
+        </div>
+        <div class="glass-card intro-card">
+          <div class="card-icon"><i class="fa-solid fa-wine-glass"></i></div>
+          <h3>럭셔리 와인바 파티</h3>
+          <p>최고의 와인 파티를 열 수 있는 바 테이블과 와인 글라스, 멋진 분위기가 완전히 준비되어 있습니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gallery Section -->
+  <section id="gallery" class="section-padding">
+    <div class="container">
+      <div class="section-header">
+        <span class="sub-title">PREMIUM GALLERY</span>
+        <h2>스폰지 파티룸 인테리어</h2>
+        <p>실제 광명 철산 스폰지 파티룸의 고품격 인테리어와 다양한 모임 공간들을 둘러보세요.</p>
+      </div>
+      <div class="gallery-grid">
+        <div class="glass-card gallery-item"><img src="./images/photo_3.jpg" alt="Sponge Partyroom View 1"></div>
+        <div class="glass-card gallery-item"><img src="./images/photo_4.jpg" alt="Sponge Partyroom View 2"></div>
+        <div class="glass-card gallery-item"><img src="./images/photo_5.jpg" alt="Sponge Partyroom View 3"></div>
+        <div class="glass-card gallery-item"><img src="./images/photo_6.jpg" alt="Sponge Partyroom View 4"></div>
+        <div class="glass-card gallery-item"><img src="./images/photo_7.jpg" alt="Sponge Partyroom View 5"></div>
+        <div class="glass-card gallery-item"><img src="./images/photo_9.jpg" alt="Sponge Partyroom View 6"></div>
+        <div class="glass-card gallery-item"><img src="./images/photo_10.jpg" alt="Sponge Partyroom View 7"></div>
+        <div class="glass-card gallery-item"><img src="./images/photo_11.jpg" alt="Sponge Partyroom View 8"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="section-padding section-dark">
+    <div class="container">
+      <div class="section-header">
+        <span class="sub-title">SPACE FEATURES</span>
+        <h2>다양한 즐거움이 가득한 멀티 플레이스</h2>
+      </div>
+      <div class="feature-layout">
+        <div class="feature-text-block">
+          <div class="feature-item active" data-image="feature-1">
+            <span class="step-num">01</span>
+            <div>
+              <h3>무제한 노래방 및 엔터테인먼트</h3>
+              <p>빵빵한 사운드의 미러볼 조명 아래서 모두가 함께 스트레스를 날리고 음악 파티를 즐길 수 있습니다.</p>
+            </div>
+          </div>
+          <div class="feature-item" data-image="feature-2">
+            <span class="step-num">02</span>
+            <div>
+              <h3>최적의 와인 & 다이닝 프라이빗 바</h3>
+              <p>좋아하는 와인과 샴페인을 가져오세요. 개성 넘치는 안주와 홈파티 테이블을 마음껏 셋팅할 수 있습니다.</p>
+            </div>
+          </div>
+          <div class="feature-item" data-image="feature-3">
+            <span class="step-num">03</span>
+            <div>
+              <h3>보드게임 및 두뇌 게임 Zone</h3>
+              <p>다양한 종류의 보드게임과 팀의 결속력을 더해줄 다채로운 두뇌 게임들이 준비되어 있습니다.</p>
+            </div>
+          </div>
+        </div>
+        <div class="feature-image-block">
+          <div class="glass-card image-viewer">
+            <div id="feature-img-display" class="feature-display-area" style="background: url('./images/photo_18.png') center/cover no-repeat;">
+              <div class="blur-glow-effect" style="background-color: rgba(157, 78, 221, 0.2)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section id="pricing" class="section-padding">
+    <div class="container">
+      <div class="section-header">
+        <span class="sub-title">PRICING PLANS</span>
+        <h2>합리적인 대여 요금 안내</h2>
+      </div>
+      <div class="price-cards">
+        <!-- Card 1 -->
+        <div class="glass-card price-card">
+          <div class="price-header">
+            <h3>주중 야간 대여</h3>
+            <span class="price">₩150,000 <small>/ 기본 3시간</small></span>
+            <p>기본 3시간 15만원 (초과 시 시간당 5만원 추가)</p>
+          </div>
+          <div class="price-body">
+            <ul>
+              <li><i class="fa-solid fa-circle-check"></i> 월~목요일 밤 전용 요금</li>
+              <li><i class="fa-solid fa-circle-check"></i> 노래방 기기 무료 이용</li>
+              <li><i class="fa-solid fa-circle-check"></i> 주차 1대 무료 지원</li>
+              <li><i class="fa-solid fa-circle-check"></i> 80평 단독 대관 전체 이용</li>
+            </ul>
+          </div>
+        </div>
+        <!-- Card 2 -->
+        <div class="glass-card price-card highlight">
+          <div class="hot-badge">POPULAR</div>
+          <div class="price-header">
+            <h3>주말 야간 대여</h3>
+            <span class="price">₩300,000 <small>/ 6시간</small></span>
+            <p>야간 6시간 자유 이용 (새벽 2시 이전 퇴실)</p>
+          </div>
+          <div class="price-body">
+            <ul>
+              <li><i class="fa-solid fa-circle-check"></i> 금~일요일 밤 프라이빗 올나잇 파티</li>
+              <li><i class="fa-solid fa-circle-check"></i> 노래방 기기 & 앰프 무상 제공</li>
+              <li><i class="fa-solid fa-circle-check"></i> 빔프로젝트 및 미디어 셋업</li>
+              <li><i class="fa-solid fa-circle-check"></i> 주차 1대 무료 지원</li>
+            </ul>
+          </div>
+        </div>
+        <!-- Card 3 -->
+        <div class="glass-card price-card">
+          <div class="price-header">
+            <h3>주중 주간 대여</h3>
+            <span class="price">₩50,000 <small>/ 2시간 ~</small></span>
+            <p>오후 6시 이전 퇴실 (3시간 7.5만 / 4시간 10만)</p>
+          </div>
+          <div class="price-body">
+            <ul>
+              <li><i class="fa-solid fa-circle-check"></i> 낮 시간 세미나, 동호회 모임 최적</li>
+              <li><i class="fa-solid fa-circle-check"></i> 주중(월~목) 주간 타임 전용</li>
+              <li><i class="fa-solid fa-circle-check"></i> 초고속 무선 인터넷 완비</li>
+              <li><i class="fa-solid fa-circle-check"></i> 외부 다이닝/안주 배달 허용</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Calculator Section -->
+  <section id="calculator" class="section-padding section-dark">
+    <div class="container">
+      <div class="section-header">
+        <span class="sub-title">REALTIME ESTIMATE</span>
+        <h2>실시간 대여 요금 계산기</h2>
+        <p>원하는 대여 옵션을 마우스로 조절하여 즉시 대여 비용을 확인해보세요.</p>
+      </div>
+      <div class="calculator-grid">
+        <div class="glass-card calc-inputs">
+          <div class="input-group">
+            <label><i class="fa-solid fa-calendar-day"></i> 대여 요일 선택</label>
+            <div class="radio-btn-group">
+              <input type="radio" id="day-weekday" name="rent-day" value="weekday" checked>
+              <label for="day-weekday">주중 (월~목)</label>
+              <input type="radio" id="day-weekend" name="rent-day" value="weekend">
+              <label for="day-weekend">주말 (금~일)</label>
+            </div>
+          </div>
+          <div class="input-group">
+            <label><i class="fa-solid fa-clock"></i> 대여 시간대 선택</label>
+            <div class="radio-btn-group">
+              <input type="radio" id="time-day" name="rent-time" value="day" checked>
+              <label for="time-day">주간 (10:00 - 18:00)</label>
+              <input type="radio" id="time-night" name="rent-time" value="night">
+              <label for="time-night">야간 (18:00 - 24:00+)</label>
+            </div>
+          </div>
+          <div class="input-group">
+            <label id="hours-label"><i class="fa-solid fa-hourglass-half"></i> 대여 시간: 3시간</label>
+            <input type="range" id="rent-hours-range" min="2" max="8" value="3" class="slider">
+            <div class="range-hint">최소 2시간부터 최대 8시간까지 연장 가능</div>
+          </div>
+        </div>
+        <div class="glass-card calc-result">
+          <div class="calc-result-header">
+            <h3>나의 예상 견적</h3>
+            <p>실시간으로 집계된 이용 금액입니다.</p>
+          </div>
+          <div class="calc-result-body">
+            <div class="price-display">
+              <span class="currency">₩</span>
+              <span id="calculated-price-amount" class="amount">100,000</span>
+            </div>
+            <div class="estimate-details">
+              <p id="est-day-type">이용 요일: 주중 (월~목)</p>
+              <p id="est-time-type">이용 시간대: 주간</p>
+              <p id="est-hours">총 이용 시간: 3시간</p>
+            </div>
+            <button class="btn btn-primary btn-block btn-booking-trigger">이 조건으로 바로 예약</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Location Section -->
+  <section id="location" class="section-padding">
+    <div class="container">
+      <div class="section-header">
+        <span class="sub-title">DIRECTIONS</span>
+        <h2>찾아오시는 길 & 이용 안내</h2>
+      </div>
+      <div class="location-grid">
+        <div class="glass-card map-card">
+          <!-- Real Interactive Map utilizing google map iframe styled for dark theme -->
+          <div class="map-inner" style="padding: 0;">
+            <iframe 
+              src="https://maps.google.com/maps?q=%EA%B2%BD%EA%B8%B0%EB%8F%84%20%EA%B4%91%EB%AA%85%EC%8B%9C%20%EC%B2%A0%EC%82%B0%EB%8F%99%20432&t=&z=17&ie=UTF8&iwloc=&output=embed" 
+              width="100%" 
+              height="100%" 
+              style="border:0; filter: invert(90%) hue-rotate(180deg); opacity: 0.85;" 
+              allowfullscreen="" 
+              loading="lazy" 
+              referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
+          </div>
+          <div class="map-actions">
+            <a href="https://map.naver.com/v5/search/%EA%B2%BD%EA%B8%B0%EB%8F%84%20%EA%B4%91%EB%AA%85%EC%8B%9C%20%EC%B2%A0%EC%82%B0%EB%8F%99%20432" target="_blank" class="btn btn-secondary btn-sm"><i class="fa-solid fa-map"></i> 네이버 지도 길찾기</a>
+            <a href="https://map.kakao.com/link/search/%EA%B2%BD%EA%B8%B0%EB%8F%84%20%EA%B4%91%EB%AA%85%EC%8B%9C%20%EC%B2%A0%EC%82%B0%EB%8F%99%20432" target="_blank" class="btn btn-secondary btn-sm"><i class="fa-solid fa-map-pin"></i> 카카오맵 길찾기</a>
+          </div>
+        </div>
+        <div class="glass-card info-card">
+          <div class="info-block">
+            <h3><i class="fa-solid fa-location-arrow"></i> 위치 상세</h3>
+            <p>경기도 광명시 철산동 432 대현빌딩 (스폰지)</p>
+            <p class="desc-highlight">7호선 철산역 1번 출구 인근 (대현빌딩 2층)</p>
+          </div>
+          <div class="info-block">
+            <h3><i class="fa-solid fa-square-parking"></i> 주차 정보</h3>
+            <p>건물 전용 주차장 내 <strong>1대 무료 주차</strong> 지원</p>
+            <p>초과 차량은 인근 공영 주차장 안내를 해드립니다.</p>
+          </div>
+          <div class="info-block">
+            <h3><i class="fa-solid fa-phone-volume"></i> 예약 및 안내 문의</h3>
+            <p class="phone-number">010-8280-8245</p>
+            <p>운영시간: 연중무휴 24시간 영업</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-container">
+      <div class="footer-left">
+        <h3>SPONGE PARTYROOM</h3>
+        <p>대표자: 대현 | 경기도 광명시 철산동 432 대현빌딩</p>
+        <p>Copyright © 2026 Gwangmyeong Cheolsan Sponge Partyroom. All rights reserved.</p>
+      </div>
+      <div class="footer-right">
+        <a href="#" class="social-icon"><i class="fa-brands fa-instagram"></i></a>
+        <a href="#" class="social-icon"><i class="fa-solid fa-blog"></i></a>
+        <a href="#" class="social-icon"><i class="fa-solid fa-envelope"></i></a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Booking Modal -->
+  <div id="booking-modal" class="modal-overlay">
+    <div class="glass-card modal-container">
+      <button class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-header">
+        <h2>스폰지 파티룸 <span class="gradient-text">예약 신청</span></h2>
+        <p>간단한 예약을 남겨주시면 담당자가 즉시 문자 또는 전화로 확정해 드립니다.</p>
+      </div>
+      <form id="booking-form" class="modal-form">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="user-name">예약자 성함</label>
+            <input type="text" id="user-name" required placeholder="홍길동">
+          </div>
+          <div class="form-group">
+            <label for="user-phone">연락처</label>
+            <input type="tel" id="user-phone" required placeholder="010-1234-5678">
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="booking-date">예약 희망 날짜</label>
+            <input type="date" id="booking-date" required>
+          </div>
+          <div class="form-group">
+            <label for="guest-count">이용 인원</label>
+            <input type="number" id="guest-count" min="2" max="40" value="8" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="booking-note">추가 요청사항</label>
+          <textarea id="booking-note" rows="3" placeholder="기타 필요한 세부 요청사항을 입력해주세요. (예: 마이크 추가, 바베큐 셋업 등)"></textarea>
+        </div>
+        <div class="booking-summary-box">
+          <p>선택된 예약 예상 요금: <strong>₩<span id="modal-summary-price">100,000</span></strong></p>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">예약 확정 및 신청</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Auth Modal (Login & Signup) -->
+  <div id="auth-modal" class="modal-overlay">
+    <div class="glass-card modal-container auth-modal-container">
+      <button id="btn-auth-close" class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+      
+      <div class="auth-tabs">
+        <button class="auth-tab-btn active" data-tab="login-tab">로그인</button>
+        <button class="auth-tab-btn" data-tab="signup-tab">회원가입</button>
+      </div>
+      
+      <!-- Login Form -->
+      <div id="login-tab" class="auth-tab-content active">
+        <div class="modal-header">
+          <h2>반갑습니다!</h2>
+          <p>로그인하시면 기존 정보로 편리하게 예약하실 수 있습니다.</p>
+        </div>
+        <form id="login-form" class="modal-form">
+          <div class="form-group">
+            <label for="login-email">이메일 주소</label>
+            <input type="email" id="login-email" required placeholder="example@email.com">
+          </div>
+          <div class="form-group">
+            <label for="login-password">비밀번호</label>
+            <input type="password" id="login-password" required placeholder="비밀번호 입력">
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">로그인</button>
+        </form>
+      </div>
+      
+      <!-- Signup Form -->
+      <div id="signup-tab" class="auth-tab-content">
+        <div class="modal-header">
+          <h2>새 계정 만들기</h2>
+          <p>간단한 가입으로 예약을 더욱 간편하게 시작하세요.</p>
+        </div>
+        <form id="signup-form" class="modal-form">
+          <div class="form-group">
+            <label for="signup-nickname">예약자 성함 (닉네임)</label>
+            <input type="text" id="signup-nickname" required placeholder="홍길동">
+          </div>
+          <div class="form-group">
+            <label for="signup-email">이메일 주소</label>
+            <input type="email" id="signup-email" required placeholder="example@email.com">
+          </div>
+          <div class="form-group">
+            <label for="signup-password">비밀번호</label>
+            <input type="password" id="signup-password" required placeholder="6자리 이상 비밀번호">
+          </div>
+          <div class="form-group">
+            <label for="signup-password-confirm">비밀번호 확인</label>
+            <input type="password" id="signup-password-confirm" required placeholder="비밀번호 다시 입력">
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">가입 완료</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
