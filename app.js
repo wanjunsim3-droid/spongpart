@@ -519,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // 클립보드에 복사할 정갈한 예약 템플릿 텍스트 생성
-    const clipboardText = `[스폰지 파티룸 예약 신청서]
+    const clipboardText = `[딴따라 파티룸 예약 신청서]
 • 예약자: ${name}님
 • 연락처: ${phone}
 • 이용 날짜: ${date}
@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 사용자의 클립보드에 예약 텍스트 복사
     navigator.clipboard.writeText(clipboardText).then(() => {
-      alert(`🎉 예약 신청서 정보가 클립보드에 자동으로 복사되었습니다!\n\n확인 버튼을 누르시면 [스폰지 파티룸] 카카오톡 채널 1:1 대화방으로 이동합니다. 대화창에 '붙여넣기(Ctrl+V)' 하셔서 전송 버튼을 눌러주세요.`);
+      alert(`🎉 예약 신청서 정보가 클립보드에 자동으로 복사되었습니다!\n\n확인 버튼을 누르시면 [딴따라 파티룸] 카카오톡 채널 1:1 대화방으로 이동합니다. 대화창에 '붙여넣기(Ctrl+V)' 하셔서 전송 버튼을 눌러주세요.`);
       
       // 카카오 채널 1:1 대화방 링크 연결 (Kakao SDK 기반 실행)
       if (window.Kakao && window.Kakao.isInitialized()) {

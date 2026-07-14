@@ -23,7 +23,7 @@ let useFirebase = false;
 const adminEmails = [
   'edusim71@gmail.com',
   'admin@email.com',
-  'admin@sponge.com'
+  'admin@tantara.com'
 ];
 
 try {
