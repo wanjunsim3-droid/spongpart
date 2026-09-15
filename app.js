@@ -481,6 +481,17 @@ document.addEventListener('DOMContentLoaded', () => {
   bookingForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
+    // 이용 규정 동의 체크 여부 검증
+    const agreeRules = document.getElementById('agree-rules');
+    if (agreeRules && !agreeRules.checked) {
+      alert("이용 규정에 동의하셔야 예약 신청이 가능합니다.");
+      return;
+    }
+
+    // 접속한 페이지명에 따라 브랜드명을 동적으로 세팅
+    const isDdanddara = window.location.pathname.includes('ddanddara');
+    const brandName = isDdanddara ? '딴따라 공간대여' : '스폰지 파티룸';
+
     const name = document.getElementById('user-name').value;
     const phone = document.getElementById('user-phone').value;
     const date = document.getElementById('booking-date').value;
@@ -519,7 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // 클립보드에 복사할 정갈한 예약 템플릿 텍스트 생성
-    const clipboardText = `[딴따라 파티룸 예약 신청서]
+    const clipboardText = `[${brandName} 예약 신청서]
 • 예약자: ${name}님
 • 연락처: ${phone}
 • 이용 날짜: ${date}
@@ -531,7 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 사용자의 클립보드에 예약 텍스트 복사
     navigator.clipboard.writeText(clipboardText).then(() => {
-      alert(`🎉 예약 신청서 정보가 클립보드에 자동으로 복사되었습니다!\n\n확인 버튼을 누르시면 [딴따라 파티룸] 카카오톡 채널 1:1 대화방으로 이동합니다. 대화창에 '붙여넣기(Ctrl+V)' 하셔서 전송 버튼을 눌러주세요.`);
+      alert(`🎉 예약 신청서 정보가 클립보드에 자동으로 복사되었습니다!\n\n확인 버튼을 누르시면 [${brandName}] 카카오톡 채널 1:1 대화방으로 이동합니다. 대화창에 '붙여넣기(Ctrl+V)' 하셔서 전송 버튼을 눌러주세요.`);
       
       // 카카오 채널 1:1 대화방 링크 연결 (Kakao SDK 기반 실행)
       if (window.Kakao && window.Kakao.isInitialized()) {
@@ -627,6 +638,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 실시간 예약일 정보 감지 및 연동
   function syncBookedDates() {
+    // 최초 1회 즉시 렌더링하여 Firebase 로드 중에도 달력이 비어있지 않도록 조치
+    renderCalendar();
+
     if (useFirebase && db) {
       try {
         const reservationsRef = ref(db, 'reservations');
@@ -641,9 +655,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
           }
           renderCalendar();
+        }, (err) => {
+          console.error("Firebase 데이터 수신 실패 (권한 제한 등):", err);
+          // 에러 시에도 기본 달력 렌더링 상태를 유지합니다.
+          renderCalendar();
         });
       } catch (err) {
         console.error("실시간 예약 데이터 수신 실패:", err);
+        renderCalendar();
       }
     } else {
       // 로컬 가상 예약 데이터 동기화
