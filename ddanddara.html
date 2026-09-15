@@ -524,8 +524,29 @@
         <div class="booking-summary-box">
           <p>선택된 예약 예상 요금: <strong>₩<span id="modal-summary-price">100,000</span></strong></p>
         </div>
-        <button type="submit" class="btn btn-primary btn-block">예약 확정 및 신청</button>
+        <button type="submit" id="btn-submit-booking" class="btn btn-primary btn-block">예약 확정 및 신청</button>
       </form>
+
+      <!-- Booking Success View -->
+      <div id="booking-success-view" style="display: none; text-align: center; padding: 10px 0;">
+        <div style="font-size: 48px; color: #ffd166; margin-bottom: 12px;">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 8px;">예약 신청이 <span class="gradient-text">완료</span>되었습니다!</h2>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px; line-height: 1.5;">
+          아래 예약 정보가 <strong style="color: #ffd166;">클립보드에 복사</strong>되었습니다.<br>
+          아래 카카오톡 버튼을 눌러 채팅창에 <span style="color: var(--accent-magenta); font-weight: 700;">붙여넣기(Ctrl+V)</span> 후 전송해 주세요!
+        </p>
+        <div style="margin-bottom: 16px; text-align: left;">
+          <textarea id="booking-clipboard-preview" readonly style="width: 100%; height: 125px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 10px; font-size: 13px; resize: none; font-family: inherit;"></textarea>
+          <button type="button" id="btn-re-copy" class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 8px;">
+            <i class="fa-regular fa-copy"></i> 예약 내용 다시 복사하기
+          </button>
+        </div>
+        <a href="http://pf.kakao.com/_jxjGxgn/chat" id="btn-go-kakao" target="_blank" rel="noopener noreferrer" class="btn btn-kakao btn-block" style="font-size: 16px; padding: 14px 20px;">
+          <i class="fa-solid fa-comment"></i> 카카오톡 대화방 열기
+        </a>
+      </div>
     </div>
   </div>
 

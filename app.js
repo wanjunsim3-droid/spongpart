@@ -279,12 +279,49 @@ document.addEventListener('DOMContentLoaded', () => {
   calculatePrice();
 
   // =========================================================================
-  // 4. Booking Modal Toggle
+  // 4. Booking Modal Toggle & Seamless Submission Flow
   // =========================================================================
   const bookingModal = document.getElementById('booking-modal');
   const modalCloseBtn = document.querySelector('.modal-close-btn');
   const bookingTriggers = document.querySelectorAll('.btn-booking-trigger');
   const bookingForm = document.getElementById('booking-form');
+  const bookingSuccessView = document.getElementById('booking-success-view');
+  const bookingClipboardPreview = document.getElementById('booking-clipboard-preview');
+  const btnReCopy = document.getElementById('btn-re-copy');
+  const btnGoKakao = document.getElementById('btn-go-kakao');
+
+  // 클립보드 복사 함수 (최신 API + Fallback 지원으로 100% 호환)
+  function copyTextToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).catch(() => {
+        return fallbackCopyTextToClipboard(text);
+      });
+    } else {
+      return fallbackCopyTextToClipboard(text);
+    }
+  }
+
+  function fallbackCopyTextToClipboard(text) {
+    return new Promise((resolve, reject) => {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.top = "-9999px";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (successful) resolve();
+        else reject(new Error('Copy command failed'));
+      } catch (err) {
+        document.body.removeChild(textArea);
+        reject(err);
+      }
+    });
+  }
 
   // 오늘 날짜로 기본값 설정 (YYYY-MM-DD 형식) 및 클릭 시 달력 팝업 노출
   const bookingDateInput = document.getElementById('booking-date');
@@ -307,17 +344,127 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  bookingTriggers.forEach(btn => {
-    btn.addEventListener('click', () => {
-      bookingModal.classList.add('active');
-      document.body.style.overflow = 'hidden'; // Lock background scroll
-    });
-  });
+  function openBookingModal() {
+    // 모달 초기 상태 복원 (폼 노출, 완료 뷰 숨김)
+    if (bookingForm) bookingForm.style.display = 'block';
+    if (bookingSuccessView) bookingSuccessView.style.display = 'none';
+    bookingModal.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Lock background scroll
+  }
 
   function closeModal() {
     bookingModal.classList.remove('active');
     document.body.style.overflow = ''; // Unlock scroll
   }
+
+  bookingTriggers.forEach(btn => {
+    btn.addEventListener('click', openBookingModal);
+  });
+
+  if (modalCloseBtn) {
+    modalCloseBtn.addEventListener('click', closeModal);
+  }
+
+  // Close modal when clicking on the overlay shadow
+  bookingModal.addEventListener('click', (e) => {
+    if (e.target === bookingModal) {
+      closeModal();
+    }
+  });
+
+  // 다시 복사하기 버튼 이벤트
+  if (btnReCopy && bookingClipboardPreview) {
+    btnReCopy.addEventListener('click', () => {
+      copyTextToClipboard(bookingClipboardPreview.value).then(() => {
+        alert("📋 예약 신청서가 클립보드에 다시 복사되었습니다!");
+      }).catch(() => {
+        bookingClipboardPreview.select();
+        alert("텍스트를 직접 복사(Ctrl+C)해 주세요.");
+      });
+    });
+  }
+
+  // Handle Form Submission (팝업 차단 없는 원활한 카카오톡 연결)
+  bookingForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    // 이용 규정 동의 체크 여부 검증
+    const agreeRules = document.getElementById('agree-rules');
+    if (agreeRules && !agreeRules.checked) {
+      alert("이용 규정에 동의하셔야 예약 신청이 가능합니다.");
+      return;
+    }
+
+    // 접속한 페이지명에 따라 브랜드명을 동적으로 세팅
+    const isDdanddara = window.location.pathname.includes('ddanddara');
+    const brandName = isDdanddara ? '딴따라 공간대여' : '스폰지 파티룸';
+
+    const name = document.getElementById('user-name').value;
+    const phone = document.getElementById('user-phone').value;
+    const date = document.getElementById('booking-date').value;
+    const guests = document.getElementById('guest-count').value;
+    const note = document.getElementById('booking-note').value || '없음';
+    const summaryPrice = modalSummaryPrice.textContent;
+
+    // Realtime Database 예약 데이터 안전 업로드 (오류 발생 시에도 프로세스 방해 없음)
+    if (useFirebase && db) {
+      try {
+        const reservationsRef = ref(db, 'reservations');
+        const newResRef = push(reservationsRef);
+        set(newResRef, {
+          name: name,
+          phone: phone,
+          date: date,
+          guests: guests,
+          note: note,
+          price: summaryPrice,
+          brand: brandName,
+          status: "pending",
+          createdAt: new Date().toISOString()
+        }).catch(err => {
+          console.warn("Firebase 저장 권한/네트워크 경고:", err.message);
+        });
+      } catch (err) {
+        console.warn("Realtime DB 저장 예외:", err);
+      }
+    }
+
+    // 로컬 가상 모드 백업 저장
+    try {
+      let mockReservations = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
+      mockReservations.push({
+        name, phone, date, guests, note, price: summaryPrice, brand: brandName, status: "pending", createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('mock_reservations', JSON.stringify(mockReservations));
+      window.dispatchEvent(new Event('local-reservations-change'));
+    } catch (e) {
+      console.warn("LocalStorage 저장 오류:", e);
+    }
+    
+    // 클립보드에 복사할 정갈한 예약 템플릿 텍스트 생성
+    const clipboardText = `[${brandName} 예약 신청서]
+• 예약자: ${name}님
+• 연락처: ${phone}
+• 이용 날짜: ${date}
+• 이용 인원: ${guests}명
+• 예상 금액: ₩${summaryPrice}
+• 추가 요청사항: ${note}
+
+※ 카카오톡 채널 채팅방이 열리면 이 내용을 그대로 붙여넣기(Ctrl+V 또는 꾹 눌러 붙여넣기)하여 전송해 주세요.`;
+
+    // 클립보드 복사 실행
+    copyTextToClipboard(clipboardText).finally(() => {
+      // 폼 숨기고 성공 안내 화면으로 모달 뷰 전환 (팝업 차단 0%)
+      if (bookingClipboardPreview) {
+        bookingClipboardPreview.value = clipboardText;
+      }
+      bookingForm.style.display = 'none';
+      if (bookingSuccessView) {
+        bookingSuccessView.style.display = 'block';
+      }
+      bookingForm.reset();
+    });
+  });
 
   // =========================================================================
   // 4-2. Auth Modal (Login/Signup) Toggle & Form Handle
@@ -454,121 +601,6 @@ document.addEventListener('DOMContentLoaded', () => {
         userNameInput.readOnly = false;
       }
     }
-  });
-
-  modalCloseBtn.addEventListener('click', closeModal);
-  
-  // Close modal when clicking on the overlay shadow
-  bookingModal.addEventListener('click', (e) => {
-    if (e.target === bookingModal) {
-      closeModal();
-    }
-  });
-
-  // Initialize Kakao SDK
-  const KAKAO_APP_KEY = '508f4903c8bd16d633c6251d8a945ed7'; // User's Kakao developers JS App Key
-  if (window.Kakao) {
-    try {
-      if (!window.Kakao.isInitialized()) {
-        window.Kakao.init(KAKAO_APP_KEY);
-      }
-    } catch (err) {
-      console.error("Kakao SDK init failed:", err);
-    }
-  }
-
-  // Handle Form Submission
-  bookingForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    // 이용 규정 동의 체크 여부 검증
-    const agreeRules = document.getElementById('agree-rules');
-    if (agreeRules && !agreeRules.checked) {
-      alert("이용 규정에 동의하셔야 예약 신청이 가능합니다.");
-      return;
-    }
-
-    // 접속한 페이지명에 따라 브랜드명을 동적으로 세팅
-    const isDdanddara = window.location.pathname.includes('ddanddara');
-    const brandName = isDdanddara ? '딴따라 공간대여' : '스폰지 파티룸';
-
-    const name = document.getElementById('user-name').value;
-    const phone = document.getElementById('user-phone').value;
-    const date = document.getElementById('booking-date').value;
-    const guests = document.getElementById('guest-count').value;
-    const note = document.getElementById('booking-note').value || '없음';
-    const summaryPrice = modalSummaryPrice.textContent;
-
-    // Realtime Database 예약 데이터 업로드
-    if (useFirebase && db) {
-      try {
-        const reservationsRef = ref(db, 'reservations');
-        const newResRef = push(reservationsRef);
-        set(newResRef, {
-          name: name,
-          phone: phone,
-          date: date,
-          guests: guests,
-          note: note,
-          price: summaryPrice,
-          status: "pending", // 초기 대기 중 상태
-          createdAt: new Date().toISOString()
-        });
-        console.log("예약 정보가 Realtime Database에 저장되었습니다.");
-      } catch (err) {
-        console.error("Realtime DB 저장 실패:", err);
-      }
-    } else {
-      // 로컬 가상 모드 백업 저장
-      let mockReservations = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
-      mockReservations.push({
-        name, phone, date, guests, note, price: summaryPrice, status: "pending", createdAt: new Date().toISOString()
-      });
-      localStorage.setItem('mock_reservations', JSON.stringify(mockReservations));
-      // 로컬 달력 상태 갱신 이벤트 트리거
-      window.dispatchEvent(new Event('local-reservations-change'));
-    }
-    
-    // 클립보드에 복사할 정갈한 예약 템플릿 텍스트 생성
-    const clipboardText = `[${brandName} 예약 신청서]
-• 예약자: ${name}님
-• 연락처: ${phone}
-• 이용 날짜: ${date}
-• 이용 인원: ${guests}명
-• 예상 금액: ₩${summaryPrice}
-• 추가 요청사항: ${note}
-
-※ 카카오톡 채널 채팅방이 열리면 이 내용을 그대로 붙여넣기(Ctrl+V 또는 꾹 눌러 붙여넣기)하여 전송해 주세요.`;
-
-    // 사용자의 클립보드에 예약 텍스트 복사
-    navigator.clipboard.writeText(clipboardText).then(() => {
-      alert(`🎉 예약 신청서 정보가 클립보드에 자동으로 복사되었습니다!\n\n확인 버튼을 누르시면 [${brandName}] 카카오톡 채널 1:1 대화방으로 이동합니다. 대화창에 '붙여넣기(Ctrl+V)' 하셔서 전송 버튼을 눌러주세요.`);
-      
-      // 카카오 채널 1:1 대화방 링크 연결 (Kakao SDK 기반 실행)
-      if (window.Kakao && window.Kakao.isInitialized()) {
-        try {
-          window.Kakao.Channel.chat({
-            channelPublicId: '_jxjGxgn'
-          });
-        } catch (err) {
-          console.error("Kakao Channel chat failed, fallback to url", err);
-          window.open('http://pf.kakao.com/_jxjGxgn/chat', '_blank');
-        }
-      } else {
-        window.open('http://pf.kakao.com/_jxjGxgn/chat', '_blank');
-      }
-      
-      bookingForm.reset();
-      closeModal();
-    }).catch(err => {
-      console.error('Clipboard copy failed: ', err);
-      // 클립보드 복사 실패 시 폴백 처리
-      alert(`🎉 예약 신청이 접수되었습니다. 아래 예약 내용을 복사하여 카카오톡 대화방에 전송해 주세요:\n\n${clipboardText}`);
-      window.open('http://pf.kakao.com/_jxjGxgn/chat', '_blank');
-      
-      bookingForm.reset();
-      closeModal();
-    });
   });
 
   // =========================================================================
