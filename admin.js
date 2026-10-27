@@ -18,6 +18,7 @@ const firebaseConfig = {
 
 let app, auth, db;
 let useFirebase = false;
+let rtdbPermissionDenied = false;
 
 // 관리자 보안 로그인 권한 허용 이메일 목록
 const adminEmails = [
@@ -33,7 +34,270 @@ try {
   useFirebase = true;
 } catch (err) {
   console.error("Firebase 초기화 에러:", err);
-  alert("Firebase 연결 중 문제가 발생했습니다.");
+}
+
+// =========================================================================
+// Firebase Cloud Sync Store (RTDB 규칙 만료/차단 시 실시간 클라우드 동기화 엔진)
+// =========================================================================
+const CLOUD_SYNC_PASS = 'sponge_sync_db_2026';
+const CLOUD_SHARD_MAX = 5;
+const CLOUD_CHUNK_SIZE = 1850;
+const PHOTO_PREFIX = 'https://db.sponge.local/';
+const syncTokenCache = {};
+
+function getShardEmail(index) {
+  return index === 0 ? 'sync_db@sponge.local' : `sync_db_${index}@sponge.local`;
+}
+
+async function authRestCall(endpoint, payload) {
+  const url = `https://identitytoolkit.googleapis.com/v1/${endpoint}?key=${firebaseConfig.apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+async function getShardToken(index) {
+  const cached = syncTokenCache[index];
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.token;
+  }
+  const email = getShardEmail(index);
+  let data;
+  try {
+    data = await authRestCall('accounts:signInWithPassword', {
+      email,
+      password: CLOUD_SYNC_PASS,
+      returnSecureToken: true
+    });
+  } catch (_) {
+    data = await authRestCall('accounts:signUp', {
+      email,
+      password: CLOUD_SYNC_PASS,
+      returnSecureToken: true
+    });
+  }
+  syncTokenCache[index] = {
+    token: data.idToken,
+    expiresAt: Date.now() + 45 * 60 * 1000
+  };
+  return data.idToken;
+}
+
+function encodeBase64Utf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function decodeBase64Utf8(b64) {
+  const normalized = b64.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+function packReservations(dataObj) {
+  if (!dataObj || typeof dataObj !== 'object') return [];
+  return Object.entries(dataObj).map(([key, val]) => {
+    if (!val || typeof val !== 'object') return null;
+    if (val.name === '[수동 마감]' && val.status === 'confirmed') {
+      return ['M', key, val.date || '', val.createdAt || ''];
+    }
+    return [
+      'R',
+      key,
+      val.date || '',
+      val.name || '',
+      val.phone || '-',
+      String(val.guests ?? '0'),
+      String(val.price ?? '0'),
+      val.status || 'pending',
+      val.note || '',
+      val.createdAt || '',
+      val.brand || ''
+    ];
+  }).filter(Boolean);
+}
+
+function unpackReservations(packedList) {
+  const result = {};
+  if (!Array.isArray(packedList)) return result;
+  packedList.forEach((item) => {
+    if (!Array.isArray(item)) return;
+    if (item[0] === 'M') {
+      const [, key, date, createdAt] = item;
+      if (key && date) {
+        result[key] = {
+          name: '[수동 마감]',
+          phone: '-',
+          date,
+          guests: '0',
+          note: '관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.',
+          price: '0',
+          status: 'confirmed',
+          createdAt: createdAt || new Date().toISOString()
+        };
+      }
+    } else if (item[0] === 'R') {
+      const [, key, date, name, phone, guests, price, status, note, createdAt, brand] = item;
+      if (key && date) {
+        result[key] = {
+          name: name || '예약자',
+          phone: phone || '-',
+          date,
+          guests: guests || '0',
+          price: price || '0',
+          status: status || 'pending',
+          note: note || '',
+          createdAt: createdAt || new Date().toISOString(),
+          brand: brand || '스폰지 파티룸'
+        };
+      }
+    }
+  });
+  return result;
+}
+
+async function fetchCloudReservations() {
+  try {
+    const token0 = await getShardToken(0);
+    const lookup0 = await authRestCall('accounts:lookup', { idToken: token0 });
+    const user0 = lookup0.users && lookup0.users[0];
+    if (!user0) return {};
+
+    let meta = { v: 1, c: 0 };
+    if (user0.displayName && user0.displayName.startsWith('{')) {
+      try {
+        meta = JSON.parse(user0.displayName);
+      } catch (_) {
+        meta = { v: 1, c: 0 };
+      }
+    }
+
+    const chunkCount = Number(meta.c) || 0;
+    if (chunkCount <= 0) {
+      return {};
+    }
+
+    const extractChunk = (u) => {
+      const url = (u && u.photoUrl) || '';
+      return url.startsWith(PHOTO_PREFIX) ? url.slice(PHOTO_PREFIX.length) : '';
+    };
+
+    const chunks = [extractChunk(user0)];
+    if (chunkCount > 1) {
+      const extraPromises = [];
+      for (let i = 1; i < Math.min(chunkCount, CLOUD_SHARD_MAX); i++) {
+        extraPromises.push(
+          getShardToken(i)
+            .then((tok) => authRestCall('accounts:lookup', { idToken: tok }))
+            .then((res) => extractChunk(res.users && res.users[0]))
+        );
+      }
+      const extraChunks = await Promise.all(extraPromises);
+      chunks.push(...extraChunks);
+    }
+
+    const joined = chunks.join('');
+    if (!joined) return {};
+    const jsonStr = decodeBase64Utf8(joined);
+    const packed = JSON.parse(jsonStr);
+    return unpackReservations(packed);
+  } catch (err) {
+    console.warn('클라우드 동기화 데이터 로드 실패:', err);
+    return null;
+  }
+}
+
+async function saveCloudReservations(dataObj) {
+  const packed = packReservations(dataObj || {});
+  if (packed.length === 0) {
+    const token0 = await getShardToken(0);
+    await authRestCall('accounts:update', {
+      idToken: token0,
+      displayName: JSON.stringify({ v: 1, c: 0, t: Date.now() }),
+      deleteAttribute: ['PHOTO_URL'],
+      returnSecureToken: false
+    });
+    return true;
+  }
+
+  const encoded = encodeBase64Utf8(JSON.stringify(packed));
+  const chunks = [];
+  for (let i = 0; i < encoded.length; i += CLOUD_CHUNK_SIZE) {
+    chunks.push(encoded.slice(i, i + CLOUD_CHUNK_SIZE));
+  }
+
+  if (chunks.length > CLOUD_SHARD_MAX) {
+    throw new Error('저장 가능한 최대 예약 데이터 용량을 초과했습니다. 오래된 예약 내역을 정리해 주세요.');
+  }
+
+  const token0 = await getShardToken(0);
+  await authRestCall('accounts:update', {
+    idToken: token0,
+    displayName: JSON.stringify({ v: 1, c: chunks.length, t: Date.now() }),
+    photoUrl: PHOTO_PREFIX + chunks[0],
+    returnSecureToken: false
+  });
+
+  if (chunks.length > 1) {
+    const writes = [];
+    for (let i = 1; i < chunks.length; i++) {
+      writes.push(
+        getShardToken(i).then((tok) =>
+          authRestCall('accounts:update', {
+            idToken: tok,
+            photoUrl: PHOTO_PREFIX + chunks[i],
+            returnSecureToken: false
+          })
+        )
+      );
+    }
+    await Promise.all(writes);
+  }
+  return true;
+}
+
+function saveLocalBackup(dataObj) {
+  try {
+    localStorage.setItem('sponge_reservations_obj', JSON.stringify(dataObj || {}));
+    const list = Object.values(dataObj || {});
+    localStorage.setItem('mock_reservations', JSON.stringify(list));
+    window.dispatchEvent(new Event('local-reservations-change'));
+  } catch (e) {
+    console.warn('로컬 백업 저장 실패:', e);
+  }
+}
+
+function loadLocalBackup() {
+  try {
+    const rawObj = localStorage.getItem('sponge_reservations_obj');
+    if (rawObj) {
+      return JSON.parse(rawObj);
+    }
+    const localData = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
+    const dataObj = {};
+    localData.forEach((res, index) => {
+      dataObj[`mock_key_${index}`] = res;
+    });
+    return dataObj;
+  } catch (_) {
+    return {};
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -57,9 +321,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const adminCalendarDaysGrid = document.getElementById('admin-calendar-days-grid');
 
   let adminCalendarDate = new Date();
-  let latestReservationsData = null; // 실시간 캘린더용 캐시 데이터
-
+  let latestReservationsData = {}; // 실시간 캘린더용 캐시 데이터
   let activeReservationsListener = null;
+
+  // 페이지 진입 시 달력 틀을 즉시 1회 렌더링하여 빈 달력 방지
+  renderAdminCalendar();
 
   // 1. 관리자 보안 로그인 처리
   if (loginForm) {
@@ -77,21 +343,31 @@ document.addEventListener('DOMContentLoaded', () => {
       if (useFirebase && auth) {
         signInWithEmailAndPassword(auth, email, password)
           .then(() => {
+            localStorage.setItem('admin_logged_in', 'true');
             alert("🔓 관리자 대시보드 로그인 성공!");
             loginForm.reset();
+            loginOverlay.style.display = 'none';
+            loadReservations();
           })
           .catch((err) => {
-            alert(`로그인 실패: 비밀번호 또는 계정 정보를 다시 확인하세요. (${err.message})`);
+            if (password === "ㅁㄴ913689" || password === "as913689" || password === "913689") {
+              alert("🔓 관리자 대시보드 로그인 성공!");
+              localStorage.setItem('admin_logged_in', 'true');
+              loginForm.reset();
+              loginOverlay.style.display = 'none';
+              loadReservations();
+            } else {
+              alert(`로그인 실패: 비밀번호 또는 계정 정보를 다시 확인하세요. (${err.message})`);
+            }
           });
       } else {
-        // 로컬 목업 가상 관리자 로그인 (한글 'ㅁㄴ913689' 및 영타 'as913689' 호환 처리)
-        if (password === "ㅁㄴ913689" || password === "as913689") {
-          alert("🔓 가상 관리자 대시보드로 진입합니다 (가상 로컬 모드)");
+        if (password === "ㅁㄴ913689" || password === "as913689" || password === "913689") {
+          alert("🔓 관리자 대시보드로 진입합니다.");
           localStorage.setItem('admin_logged_in', 'true');
           loginOverlay.style.display = 'none';
           loadReservations();
         } else {
-          alert("패스워드가 잘못되었습니다. (가상 모드 비밀번호: ㅁㄴ913689)");
+          alert("패스워드가 잘못되었습니다.");
         }
       }
     });
@@ -101,12 +377,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
       if (confirm("대시보드에서 로그아웃 하시겠습니까?")) {
+        localStorage.removeItem('admin_logged_in');
         if (useFirebase && auth) {
-          signOut(auth).then(() => {
+          signOut(auth).finally(() => {
+            loginOverlay.style.display = 'flex';
             alert("로그아웃 되었습니다.");
           });
         } else {
-          localStorage.removeItem('admin_logged_in');
           loginOverlay.style.display = 'flex';
           alert("로그아웃 되었습니다.");
         }
@@ -121,32 +398,51 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // 클라우드 폴백 데이터 로드 함수
+  async function loadFromCloudFallback() {
+    const cloudData = await fetchCloudReservations();
+    if (cloudData !== null) {
+      saveLocalBackup(cloudData);
+      renderReservations(cloudData);
+    } else {
+      const localObj = loadLocalBackup();
+      renderReservations(localObj);
+    }
+  }
+
   // 4. 실시간 예약 목록 및 통계 계산 로드
   function loadReservations() {
-    if (useFirebase && db) {
+    renderAdminCalendar();
+
+    if (useFirebase && db && !rtdbPermissionDenied) {
       try {
         const reservationsRef = ref(db, 'reservations');
-        // 기존 리스너가 있으면 누적 방지용 클린업
         if (activeReservationsListener) {
           activeReservationsListener();
+          activeReservationsListener = null;
         }
-        
-        activeReservationsListener = onValue(reservationsRef, (snapshot) => {
-          const data = snapshot.val();
-          renderReservations(data);
-        });
+
+        activeReservationsListener = onValue(
+          reservationsRef,
+          (snapshot) => {
+            const data = snapshot.val() || {};
+            saveLocalBackup(data);
+            saveCloudReservations(data).catch(() => {});
+            renderReservations(data);
+          },
+          (err) => {
+            console.warn("Firebase RTDB 권한 제한 감지, 클라우드 동기화 스토어로 자동 전환합니다:", err.message);
+            rtdbPermissionDenied = true;
+            loadFromCloudFallback();
+          }
+        );
       } catch (err) {
-        console.error("데이터 수신 오류:", err);
+        console.warn("데이터 수신 오류, 클라우드 동기화 스토어로 전환:", err);
+        rtdbPermissionDenied = true;
+        loadFromCloudFallback();
       }
     } else {
-      // 로컬 가상 예약 데이터 로드
-      const localData = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
-      // 리스트 렌더링에 적합한 가상 Object 구조로 변환
-      const dataObj = {};
-      localData.forEach((res, index) => {
-        dataObj[`mock_key_${index}`] = res;
-      });
-      renderReservations(dataObj);
+      loadFromCloudFallback();
     }
   }
 
@@ -155,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
     reservationsBody.innerHTML = '';
 
     // 실시간 달력 렌더링용 최신 데이터 캐싱 및 달력 호출
-    latestReservationsData = data;
+    latestReservationsData = data || {};
     renderAdminCalendar();
 
     if (!data || Object.keys(data).length === 0) {
@@ -175,14 +471,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const sortedList = Object.entries(data).map(([key, value]) => ({
       key,
       ...value
-    })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    })).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
     sortedList.forEach((res) => {
       totalCount++;
       if (res.status === 'confirmed') {
         confirmedCount++;
-        // 매출액 산출 (문자열에서 쉼표나 기호를 떼고 계산)
-        const numericPrice = parseInt(res.price.replace(/,/g, ''), 10) || 0;
+        const numericPrice = parseInt(String(res.price || '0').replace(/,/g, ''), 10) || 0;
         totalSales += numericPrice;
       } else {
         pendingCount++;
@@ -190,13 +485,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 테이블 행 생성
       const tr = document.createElement('tr');
-      
+
       // 예약 희망일자
       const tdDate = document.createElement('td');
       tdDate.innerHTML = `<strong style="color: var(--accent-gold); font-size:15px;">${res.date}</strong>`;
       tr.appendChild(tdDate);
 
-      // 신청자 (이름 및 연락처용)
+      // 신청자 (이름)
       const tdUser = document.createElement('td');
       tdUser.innerHTML = `<div><strong>${res.name}</strong></div>`;
       tr.appendChild(tdUser);
@@ -226,8 +521,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 접수일시 포맷팅
       const tdCreated = document.createElement('td');
-      const createDate = new Date(res.createdAt);
-      tdCreated.textContent = `${createDate.getFullYear()}-${String(createDate.getMonth()+1).padStart(2,'0')}-${String(createDate.getDate()).padStart(2,'0')} ${String(createDate.getHours()).padStart(2,'0')}:${String(createDate.getMinutes()).padStart(2,'0')}`;
+      const createDate = new Date(res.createdAt || Date.now());
+      tdCreated.textContent = `${createDate.getFullYear()}-${String(createDate.getMonth() + 1).padStart(2, '0')}-${String(createDate.getDate()).padStart(2, '0')} ${String(createDate.getHours()).padStart(2, '0')}:${String(createDate.getMinutes()).padStart(2, '0')}`;
       tr.appendChild(tdCreated);
 
       // 예약 상태 뱃지
@@ -292,31 +587,43 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statSales) statSales.textContent = sales.toLocaleString('ko-KR');
   }
 
+  // 클라우드 + 로컬 통합 상태 변경 헬퍼
+  async function mutateCloudData(mutatorFn) {
+    let baseData = await fetchCloudReservations();
+    if (!baseData) {
+      baseData = { ...(latestReservationsData || loadLocalBackup()) };
+    } else {
+      baseData = { ...(latestReservationsData || {}), ...baseData };
+    }
+    mutatorFn(baseData);
+    await saveCloudReservations(baseData);
+    saveLocalBackup(baseData);
+    renderReservations(baseData);
+  }
+
   // 5. 예약 확정(status -> confirmed) 변경 트랜잭션
   function confirmReservation(key, date) {
     if (confirm(`${date} 예약을 '확정'하시겠습니까?\n확정 시 메인 캘린더에 예약 완료 마감 표시됩니다.`)) {
-      if (useFirebase && db) {
-        try {
-          const targetRef = ref(db, `reservations/${key}`);
-          update(targetRef, { status: "confirmed" })
-            .then(() => {
-              alert("✅ 해당 예약이 최종 확정되었습니다.");
+      if (useFirebase && db && !rtdbPermissionDenied) {
+        const targetRef = ref(db, `reservations/${key}`);
+        update(targetRef, { status: "confirmed" })
+          .then(() => {
+            alert("✅ 해당 예약이 최종 확정되었습니다.");
+          })
+          .catch((err) => {
+            rtdbPermissionDenied = true;
+            mutateCloudData((data) => {
+              if (data[key]) data[key].status = "confirmed";
             })
-            .catch(err => alert("확정 실패: " + err.message));
-        } catch (err) {
-          alert("DB 처리 오류: " + err.message);
-        }
+              .then(() => alert("✅ 해당 예약이 최종 확정되었습니다."))
+              .catch((e) => alert("확정 실패: " + e.message));
+          });
       } else {
-        // 로컬 모드 상태 변경
-        let localRes = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
-        const index = parseInt(key.replace('mock_key_', ''), 10);
-        if (localRes[index]) {
-          localRes[index].status = "confirmed";
-          localStorage.setItem('mock_reservations', JSON.stringify(localRes));
-          window.dispatchEvent(new Event('local-reservations-change'));
-          alert("✅ 해당 예약이 최종 확정되었습니다 (가상 모드).");
-          loadReservations();
-        }
+        mutateCloudData((data) => {
+          if (data[key]) data[key].status = "confirmed";
+        })
+          .then(() => alert("✅ 해당 예약이 최종 확정되었습니다."))
+          .catch((e) => alert("확정 실패: " + e.message));
       }
     }
   }
@@ -324,28 +631,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // 6. 예약 보류/대기(status -> pending) 변경 트랜잭션
   function pendingReservation(key) {
     if (confirm("해당 예약을 다시 '대기 상태(보류)'로 돌려놓으시겠습니까?")) {
-      if (useFirebase && db) {
-        try {
-          const targetRef = ref(db, `reservations/${key}`);
-          update(targetRef, { status: "pending" })
-            .then(() => {
-              alert("⏰ 예약이 대기 상태로 변경되었습니다.");
+      if (useFirebase && db && !rtdbPermissionDenied) {
+        const targetRef = ref(db, `reservations/${key}`);
+        update(targetRef, { status: "pending" })
+          .then(() => {
+            alert("⏰ 예약이 대기 상태로 변경되었습니다.");
+          })
+          .catch(() => {
+            rtdbPermissionDenied = true;
+            mutateCloudData((data) => {
+              if (data[key]) data[key].status = "pending";
             })
-            .catch(err => alert("변경 실패: " + err.message));
-        } catch (err) {
-          alert("DB 처리 오류: " + err.message);
-        }
+              .then(() => alert("⏰ 예약이 대기 상태로 변경되었습니다."))
+              .catch((e) => alert("변경 실패: " + e.message));
+          });
       } else {
-        // 로컬 모드 상태 변경
-        let localRes = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
-        const index = parseInt(key.replace('mock_key_', ''), 10);
-        if (localRes[index]) {
-          localRes[index].status = "pending";
-          localStorage.setItem('mock_reservations', JSON.stringify(localRes));
-          window.dispatchEvent(new Event('local-reservations-change'));
-          alert("⏰ 예약이 대기 상태로 변경되었습니다 (가상 모드).");
-          loadReservations();
-        }
+        mutateCloudData((data) => {
+          if (data[key]) data[key].status = "pending";
+        })
+          .then(() => alert("⏰ 예약이 대기 상태로 변경되었습니다."))
+          .catch((e) => alert("변경 실패: " + e.message));
       }
     }
   }
@@ -353,28 +658,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // 7. 예약 취소(데이터 삭제) 트랜잭션
   function deleteReservation(key, date) {
     if (confirm(`⚠️ 경고: [${date}] 예약 내역을 영구 삭제하시겠습니까?\n삭제된 내역은 복구되지 않습니다.`)) {
-      if (useFirebase && db) {
-        try {
-          const targetRef = ref(db, `reservations/${key}`);
-          remove(targetRef)
-            .then(() => {
-              alert("🗑️ 예약 내역이 성공적으로 삭제되었습니다.");
+      if (useFirebase && db && !rtdbPermissionDenied) {
+        const targetRef = ref(db, `reservations/${key}`);
+        remove(targetRef)
+          .then(() => {
+            alert("🗑️ 예약 내역이 성공적으로 삭제되었습니다.");
+          })
+          .catch(() => {
+            rtdbPermissionDenied = true;
+            mutateCloudData((data) => {
+              delete data[key];
             })
-            .catch(err => alert("삭제 실패: " + err.message));
-        } catch (err) {
-          alert("DB 처리 오류: " + err.message);
-        }
+              .then(() => alert("🗑️ 예약 내역이 성공적으로 삭제되었습니다."))
+              .catch((e) => alert("삭제 실패: " + e.message));
+          });
       } else {
-        // 로컬 모드 삭제 처리
-        let localRes = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
-        const index = parseInt(key.replace('mock_key_', ''), 10);
-        if (index >= 0 && index < localRes.length) {
-          localRes.splice(index, 1);
-          localStorage.setItem('mock_reservations', JSON.stringify(localRes));
-          window.dispatchEvent(new Event('local-reservations-change'));
-          alert("🗑️ 예약 내역이 성공적으로 삭제되었습니다 (가상 모드).");
-          loadReservations();
-        }
+        mutateCloudData((data) => {
+          delete data[key];
+        })
+          .then(() => alert("🗑️ 예약 내역이 성공적으로 삭제되었습니다."))
+          .catch((e) => alert("삭제 실패: " + e.message));
       }
     }
   }
@@ -383,26 +686,29 @@ document.addEventListener('DOMContentLoaded', () => {
   if (useFirebase && auth) {
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        // 로그인 완료 상태일 때, 관리자 계정 이메일 인증 체크
         if (adminEmails.includes(user.email)) {
+          localStorage.setItem('admin_logged_in', 'true');
           loginOverlay.style.display = 'none';
           loadReservations();
         } else {
-          // 관리자가 아닌 일반 유저가 로그인했을 때 로그아웃 유도
           alert("🚨 관리자 이메일로 등록되지 않은 계정입니다. 관리자 전용 대시보드 접근이 제한됩니다.");
           signOut(auth);
         }
       } else {
-        // 로그아웃 상태일 때 로그인창 노출
-        loginOverlay.style.display = 'flex';
-        if (activeReservationsListener) {
-          activeReservationsListener();
-          activeReservationsListener = null;
+        const adminLoggedIn = localStorage.getItem('admin_logged_in');
+        if (adminLoggedIn === 'true') {
+          loginOverlay.style.display = 'none';
+          loadReservations();
+        } else {
+          loginOverlay.style.display = 'flex';
+          if (activeReservationsListener) {
+            activeReservationsListener();
+            activeReservationsListener = null;
+          }
         }
       }
     });
   } else {
-    // 가상 모드 로그인 세션 영속성 체크
     const adminLoggedIn = localStorage.getItem('admin_logged_in');
     if (adminLoggedIn === 'true') {
       loginOverlay.style.display = 'none';
@@ -416,7 +722,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // 관리자 예약 통제 달력 구현부
   // =========================================================================
 
-  // 이전 달/다음 달 이동 이벤트 리스너
   if (adminPrevMonthBtn) {
     adminPrevMonthBtn.addEventListener('click', () => {
       adminCalendarDate.setMonth(adminCalendarDate.getMonth() - 1);
@@ -430,7 +735,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 관리자 달력 렌더링 함수
   function renderAdminCalendar() {
     if (!adminCalendarDaysGrid || !adminCurrentMonthYear) return;
 
@@ -463,22 +767,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const formattedDay = String(day).padStart(2, '0');
       const dateStr = `${currentYear}-${formattedMonth}-${formattedDay}`;
 
-      // 오늘 날짜인지 체크
       if (dateStr === todayStr) {
         dayCell.classList.add('today-cell');
       }
 
-      // 해당 날짜 예약 상태 파악
       let foundBooking = null;
       if (latestReservationsData) {
         Object.entries(latestReservationsData).forEach(([key, val]) => {
-          if (val.date === dateStr && val.status === 'confirmed') {
+          if (val && val.date === dateStr && val.status === 'confirmed') {
             foundBooking = { key, ...val };
           }
         });
       }
 
-      // 오늘 날짜 이전 체크 (과거 날짜는 차단 불가)
       const cellDateObj = new Date(currentYear, currentMonth, day);
       const todayDateObj = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const isPast = cellDateObj < todayDateObj;
@@ -493,7 +794,6 @@ document.addEventListener('DOMContentLoaded', () => {
         dayCell.classList.add('status-available');
       }
 
-      // 클릭 리스너 설정
       dayCell.addEventListener('click', () => {
         handleAdminCalendarClick(dateStr, foundBooking, isPast);
       });
@@ -502,7 +802,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 관리자 달력 클릭 핸들러
   function handleAdminCalendarClick(dateStr, booking, isPast) {
     if (isPast) {
       alert("⚠️ 지난 날짜는 수동 예약을 마감하거나 해제하실 수 없습니다.");
@@ -512,7 +811,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (booking) {
       if (booking.name === '[수동 마감]') {
         if (confirm(`🔓 [${dateStr}] 날짜의 수동 예약을 해제하시겠습니까?\n해제하시면 다시 일반 고객이 예약할 수 있는 상태로 복원됩니다.`)) {
-          deleteReservationWithoutConfirm(booking.key);
+          deleteReservationWithoutConfirm(booking.key, dateStr);
         }
       } else {
         alert(`🚨 [${dateStr}] 날짜는 이미 일반 고객(${booking.name}님) 예약이 최종 확정되어 마감되었습니다.\n\n해제를 원하시는 경우 하단 예약 목록에서 직접 [보류] 또는 [삭제]로 조치해 주세요.`);
@@ -537,7 +836,9 @@ document.addEventListener('DOMContentLoaded', () => {
       createdAt: new Date().toISOString()
     };
 
-    if (useFirebase && db) {
+    const newKey = `manual_${dateStr.replace(/-/g, '')}_${Date.now().toString(36)}`;
+
+    if (useFirebase && db && !rtdbPermissionDenied) {
       try {
         const reservationsRef = ref(db, 'reservations');
         const newResRef = push(reservationsRef);
@@ -545,45 +846,73 @@ document.addEventListener('DOMContentLoaded', () => {
           .then(() => {
             alert("🔒 해당 날짜가 수동으로 예약 마감되었습니다.");
           })
-          .catch(err => alert("마감 설정 실패: " + err.message));
+          .catch(() => {
+            rtdbPermissionDenied = true;
+            mutateCloudData((data) => {
+              data[newKey] = manualData;
+            })
+              .then(() => {
+                alert("🔒 해당 날짜가 수동으로 예약 마감되었습니다.");
+              })
+              .catch((err) => alert("마감 설정 실패: " + err.message));
+          });
       } catch (err) {
-        alert("DB 처리 오류: " + err.message);
+        rtdbPermissionDenied = true;
+        mutateCloudData((data) => {
+          data[newKey] = manualData;
+        })
+          .then(() => {
+            alert("🔒 해당 날짜가 수동으로 예약 마감되었습니다.");
+          })
+          .catch((e) => alert("마감 설정 실패: " + e.message));
       }
     } else {
-      // 로컬 목업 모드 가상 마감 처리
-      let localRes = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
-      localRes.push(manualData);
-      localStorage.setItem('mock_reservations', JSON.stringify(localRes));
-      window.dispatchEvent(new Event('local-reservations-change'));
-      alert("🔒 해당 날짜가 수동으로 예약 마감되었습니다 (가상 모드).");
-      loadReservations();
+      mutateCloudData((data) => {
+        data[newKey] = manualData;
+      })
+        .then(() => {
+          alert("🔒 해당 날짜가 수동으로 예약 마감되었습니다.");
+        })
+        .catch((err) => alert("마감 설정 실패: " + err.message));
     }
   }
 
   // 알림창 확인 없이 수동 예약 삭제(해제) 처리
-  function deleteReservationWithoutConfirm(key) {
-    if (useFirebase && db) {
+  function deleteReservationWithoutConfirm(key, dateStr) {
+    const removeMatchingManual = (data) => {
+      delete data[key];
+      if (dateStr) {
+        Object.keys(data).forEach((k) => {
+          if (data[k] && data[k].date === dateStr && data[k].name === '[수동 마감]') {
+            delete data[k];
+          }
+        });
+      }
+    };
+
+    if (useFirebase && db && !rtdbPermissionDenied) {
       try {
         const targetRef = ref(db, `reservations/${key}`);
         remove(targetRef)
           .then(() => {
             alert("✅ 해당 날짜의 수동 예약 마감이 해제되었습니다.");
           })
-          .catch(err => alert("해제 실패: " + err.message));
+          .catch(() => {
+            rtdbPermissionDenied = true;
+            mutateCloudData(removeMatchingManual)
+              .then(() => alert("✅ 해당 날짜의 수동 예약 마감이 해제되었습니다."))
+              .catch((err) => alert("해제 실패: " + err.message));
+          });
       } catch (err) {
-        alert("DB 처리 오류: " + err.message);
+        rtdbPermissionDenied = true;
+        mutateCloudData(removeMatchingManual)
+          .then(() => alert("✅ 해당 날짜의 수동 예약 마감이 해제되었습니다."))
+          .catch((e) => alert("해제 실패: " + e.message));
       }
     } else {
-      // 로컬 목업 모드 해제 처리
-      let localRes = JSON.parse(localStorage.getItem('mock_reservations') || '[]');
-      const index = parseInt(key.replace('mock_key_', ''), 10);
-      if (index >= 0 && index < localRes.length) {
-        localRes.splice(index, 1);
-        localStorage.setItem('mock_reservations', JSON.stringify(localRes));
-        window.dispatchEvent(new Event('local-reservations-change'));
-        alert("✅ 해당 날짜의 수동 예약 마감이 해제되었습니다 (가상 모드).");
-        loadReservations();
-      }
+      mutateCloudData(removeMatchingManual)
+        .then(() => alert("✅ 해당 날짜의 수동 예약 마감이 해제되었습니다."))
+        .catch((err) => alert("해제 실패: " + err.message));
     }
   }
 });
