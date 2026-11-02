@@ -23,6 +23,7 @@ let rtdbPermissionDenied = false;
 // 관리자 보안 로그인 권한 허용 이메일 목록
 const adminEmails = [
   'edusim71@gmail.com',
+  'edukim48@gmail.com',
   'wanjunsim3@gmail.com',
   'admin@email.com',
   'admin@sponge.com'
@@ -30,6 +31,7 @@ const adminEmails = [
 
 let currentAdminEmail = '';
 const newAdminEmail = 'wanjunsim3@gmail.com';
+const firebaseOnlyAdminEmails = new Set([newAdminEmail, 'edukim48@gmail.com']);
 
 function adminDisplay(email) {
   if (email === newAdminEmail) return { label: '추가 관리자', className: 'owner-new' };
@@ -374,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadReservations();
           })
           .catch((err) => {
-            if (email !== newAdminEmail && (password === "ㅁㄴ913689" || password === "as913689" || password === "913689")) {
+            if (!firebaseOnlyAdminEmails.has(email) && (password === "ㅁㄴ913689" || password === "as913689" || password === "913689")) {
               alert("🔓 관리자 대시보드 로그인 성공!");
               rememberAdmin(email);
               loginForm.reset();
@@ -385,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           });
       } else {
-        if (email !== newAdminEmail && (password === "ㅁㄴ913689" || password === "as913689" || password === "913689")) {
+        if (!firebaseOnlyAdminEmails.has(email) && (password === "ㅁㄴ913689" || password === "as913689" || password === "913689")) {
           alert("🔓 관리자 대시보드로 진입합니다.");
           rememberAdmin(email);
           loginOverlay.style.display = 'none';
@@ -725,7 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (useFirebase && auth) {
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        if (adminEmails.includes(user.email)) {
+        if (adminEmails.includes((user.email || '').toLowerCase())) {
           rememberAdmin(user.email);
           loginOverlay.style.display = 'none';
           loadReservations();
@@ -735,7 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } else {
         const adminLoggedIn = localStorage.getItem('admin_logged_in');
-        if (adminLoggedIn === 'true' && adminEmails.includes(localStorage.getItem('admin_email')) && localStorage.getItem('admin_email') !== newAdminEmail) {
+        if (adminLoggedIn === 'true' && adminEmails.includes(localStorage.getItem('admin_email')) && !firebaseOnlyAdminEmails.has(localStorage.getItem('admin_email'))) {
           rememberAdmin(localStorage.getItem('admin_email'));
           loginOverlay.style.display = 'none';
           loadReservations();
@@ -750,7 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   } else {
     const adminLoggedIn = localStorage.getItem('admin_logged_in');
-    if (adminLoggedIn === 'true' && adminEmails.includes(localStorage.getItem('admin_email')) && localStorage.getItem('admin_email') !== newAdminEmail) {
+    if (adminLoggedIn === 'true' && adminEmails.includes(localStorage.getItem('admin_email')) && !firebaseOnlyAdminEmails.has(localStorage.getItem('admin_email'))) {
       rememberAdmin(localStorage.getItem('admin_email'));
       loginOverlay.style.display = 'none';
       loadReservations();
