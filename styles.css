@@ -1341,10 +1341,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     width: 100%;
   }
 }
-/* 로그인 기능 임시 비활성화 (화면에서 가림) */
-#btn-auth-toggle {
-  display: none !important;
-}
 /* Reservation Calendar Styles */
 .calendar-wrapper-container {
   max-width: 750px;
@@ -1576,3 +1572,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .booking-calendar-slot.slot-booked { color: #ef476f; background: rgba(239,71,111,.08); cursor: default; }
 .booking-calendar-slot:focus-visible { outline: 2px solid white; outline-offset: 2px; }
 #booking-time-slot { width: 100%; padding: 12px; border: 1px solid var(--border-glass); border-radius: 8px; background: #130c25; color: #fff; font: inherit; }
+
+@media (max-width: 768px) {
+  .header-container { flex-wrap: wrap; height: auto; min-height: 80px; gap: 10px; padding-top: 12px; padding-bottom: 12px; }
+  .header-right-group { gap: 8px; flex-wrap: wrap; }
+  #btn-auth-toggle { padding: 8px 10px; font-size: 12px; white-space: nowrap; }
+}
