@@ -493,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const tdDate = document.createElement('td');
       tdDate.innerHTML = `<strong style="color: var(--accent-gold); font-size:15px;">${res.date}</strong>`;
       const slotLabel = document.createElement('div');
-      slotLabel.textContent = res.timeSlot === 'am' ? '오전' : res.timeSlot === 'pm' ? '오후' : '종일';
+      slotLabel.textContent = res.timeSlot === 'am' ? '주간' : res.timeSlot === 'pm' ? '야간' : '종일';
       tdDate.appendChild(slotLabel);
       tr.appendChild(tdDate);
 
@@ -780,7 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const isPast = dateStr < todayStr;
-      for (const [timeSlot, label] of [['am', '오전'], ['pm', '오후']]) {
+      for (const [timeSlot, label] of [['am', '주간'], ['pm', '야간']]) {
         const bookings = Object.entries(latestReservationsData || {})
           .filter(([, val]) => val && val.date === dateStr && val.status === 'confirmed'
             && (!val.timeSlot || val.timeSlot === timeSlot))
@@ -806,7 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleAdminCalendarClick(dateStr, booking, isPast, timeSlot) {
-    const label = timeSlot === 'am' ? '오전' : '오후';
+    const label = timeSlot === 'am' ? '주간' : '야간';
     if (isPast) {
       alert("⚠️ 지난 날짜는 수동 예약을 마감하거나 해제하실 수 없습니다.");
       return;
@@ -814,14 +814,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (booking) {
       if (booking.name === '[수동 마감]') {
-        if (confirm(`🔓 [${dateStr} ${label}] 시간대의 수동 예약을 해제하시겠습니까?\n${booking.timeSlot ? '선택한 시간대의 마감을 해제합니다.' : '기존 종일 마감이므로 오전·오후 모두 해제됩니다.'}`)) {
+        if (confirm(`🔓 [${dateStr} ${label}] 시간대의 수동 예약을 해제하시겠습니까?\n${booking.timeSlot ? '선택한 시간대의 마감을 해제합니다.' : '기존 종일 마감이므로 주간·야간 모두 해제됩니다.'}`)) {
           deleteReservationWithoutConfirm(booking.key, dateStr, booking.timeSlot);
         }
       } else {
         alert(`🚨 [${dateStr} ${label}] 시간대는 이미 일반 고객(${booking.name}님) 예약이 최종 확정되어 마감되었습니다.\n\n해제를 원하시는 경우 하단 예약 목록에서 직접 [보류] 또는 [삭제]로 조치해 주세요.`);
       }
     } else {
-      if (confirm(`🔒 [${dateStr} ${label}] 시간대를 수동으로 예약 마감(차단)하시겠습니까?\n선택한 시간대를 마감합니다. 현재 고객용 달력은 날짜 단위이므로 해당 날짜 전체가 예약 완료로 표시됩니다.`)) {
+      if (confirm(`🔒 [${dateStr} ${label}] 시간대를 수동으로 예약 마감(차단)하시겠습니까?\n선택한 시간대를 마감합니다. 고객용 달력에서도 선택한 시간대만 예약 완료로 표시됩니다.`)) {
         createManualBlockReservation(dateStr, timeSlot);
       }
     }

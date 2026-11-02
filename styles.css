@@ -1552,3 +1552,27 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   }
 }
 
+
+/* 시간대별 예약 달력 */
+.booking-day-cell {
+  aspect-ratio: auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 2px;
+}
+.booking-calendar-slot {
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 1px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  font: inherit;
+  font-size: clamp(9px, 1.8vw, 12px);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.booking-calendar-slot.slot-available { color: #06d6a0; background: rgba(6,214,160,.08); }
+.booking-calendar-slot.slot-booked { color: #ef476f; background: rgba(239,71,111,.08); cursor: default; }
+.booking-calendar-slot:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+#booking-time-slot { width: 100%; padding: 12px; border: 1px solid var(--border-glass); border-radius: 8px; background: #130c25; color: #fff; font: inherit; }

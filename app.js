@@ -428,6 +428,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function calculatePrice() {
     const isWeekend = dayWeekend.checked;
     const isNight = timeNight.checked;
+    const slotSelect = document.getElementById('booking-time-slot');
+    if (slotSelect) slotSelect.value = isNight ? 'pm' : 'am';
     
     const rangeHint = document.querySelector('.range-hint');
     let minHours = 2;
@@ -510,6 +512,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const defaultBookedDates = [];
   let dynamicBookedDates = [];
+  const bookingTimeSlot = document.getElementById('booking-time-slot');
+  function isSlotBooked(date, slot) {
+    return defaultBookedDates.includes(date) || dynamicBookedDates.includes(`${date}:${slot}`);
+  }
+  function updateSlotAvailability() {
+    const date = document.getElementById('booking-date').value;
+    const slot = bookingTimeSlot.value;
+    const past = date < document.getElementById('booking-date').min;
+    const unavailable = past || isSlotBooked(date, slot);
+    const message = unavailable ? '선택한 날짜와 시간대는 예약이 마감되었습니다.' : '선택한 시간대는 예약 신청이 가능합니다.';
+    document.getElementById('booking-slot-status').textContent = message;
+    bookingTimeSlot.setCustomValidity(unavailable ? message : '');
+    for (const option of bookingTimeSlot.options) {
+      option.textContent = `${option.value === 'am' ? '주간 (10:00 - 18:00)' : '야간 (18:00 이후)'}${isSlotBooked(date, option.value) ? ' · 마감' : ''}`;
+    }
+  }
+  bookingTimeSlot.addEventListener('change', () => {
+    timeDay.checked = bookingTimeSlot.value === 'am';
+    timeNight.checked = bookingTimeSlot.value === 'pm';
+    calculatePrice();
+    updateSlotAvailability();
+  });
+  [timeDay, timeNight].forEach(input => input.addEventListener('change', updateSlotAvailability));
 
   function copyTextToClipboard(text) {
     if (navigator.clipboard && window.isSecureContext) {
@@ -552,6 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bookingDateInput.value = `${yyyy}-${mm}-${dd}`;
     bookingDateInput.min = `${yyyy}-${mm}-${dd}`;
 
+    bookingDateInput.addEventListener('change', updateSlotAvailability);
     bookingDateInput.addEventListener('click', () => {
       if (typeof bookingDateInput.showPicker === 'function') {
         try {
@@ -564,6 +590,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function openBookingModal() {
+    calculatePrice();
+    updateSlotAvailability();
     if (bookingForm) bookingForm.style.display = 'block';
     if (bookingSuccessView) bookingSuccessView.style.display = 'none';
     bookingModal.classList.add('active');
@@ -619,9 +647,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const note = document.getElementById('booking-note').value || '없음';
     const summaryPrice = modalSummaryPrice.textContent;
 
-    const totalBooked = [...defaultBookedDates, ...dynamicBookedDates];
-    if (totalBooked.includes(date)) {
-      alert("⚠️ 선택하신 날짜는 이미 예약이 마감되었습니다. 다른 날짜를 선택해 주세요.");
+    const timeSlot = bookingTimeSlot.value;
+    if (date < bookingDateInput.min || isSlotBooked(date, timeSlot)) {
+      alert("⚠️ 선택하신 날짜와 시간대는 예약이 마감되었습니다. 다른 시간대를 선택해 주세요.");
       return;
     }
 
@@ -629,6 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
       name: name,
       phone: phone,
       date: date,
+      timeSlot,
       guests: guests,
       note: note,
       price: summaryPrice,
@@ -665,6 +694,7 @@ document.addEventListener('DOMContentLoaded', () => {
 • 예약자: ${name}님
 • 연락처: ${phone}
 • 이용 날짜: ${date}
+• 이용 시간대: ${timeSlot === 'am' ? '주간' : '야간'}
 • 이용 인원: ${guests}명
 • 예상 금액: ₩${summaryPrice}
 • 추가 요청사항: ${note}
@@ -879,7 +909,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const values = Array.isArray(dataObjOrArr) ? dataObjOrArr : Object.values(dataObjOrArr);
     values.forEach((res) => {
       if (res && res.status === 'confirmed' && res.date) {
-        dates.add(res.date);
+        const slots = res.timeSlot === 'am' || res.timeSlot === 'pm' ? [res.timeSlot] : ['am', 'pm'];
+        slots.forEach(slot => dates.add(`${res.date}:${slot}`));
       }
     });
     return Array.from(dates);
@@ -906,6 +937,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ...localDates
     ]));
     renderCalendar();
+    updateSlotAvailability();
   }
 
   async function refreshCloudBookedDates() {
@@ -968,7 +1000,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-    const totalBookedDates = [...defaultBookedDates, ...dynamicBookedDates];
 
     for (let i = 0; i < firstDayIndex; i++) {
       const emptyCell = document.createElement('div');
@@ -978,8 +1009,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     for (let day = 1; day <= lastDate; day++) {
       const dayCell = document.createElement('div');
-      dayCell.className = 'calendar-day-cell';
-      dayCell.textContent = day;
+      dayCell.className = 'calendar-day-cell booking-day-cell';
+      const dayLabel = document.createElement('span');
+      dayLabel.textContent = day;
+      dayCell.appendChild(dayLabel);
 
       const formattedMonth = String(currentMonth + 1).padStart(2, '0');
       const formattedDay = String(day).padStart(2, '0');
@@ -992,25 +1025,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const cellDateObj = new Date(currentYear, currentMonth, day);
       const todayDateObj = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-      if (cellDateObj < todayDateObj || totalBookedDates.includes(dateStr)) {
-        dayCell.classList.add('status-booked');
-      } else {
-        dayCell.classList.add('status-available');
-        
-        dayCell.addEventListener('click', () => {
-          const bookingDateInput = document.getElementById('booking-date');
-          const bookingModal = document.getElementById('booking-modal');
-          
-          if (bookingDateInput) {
-            bookingDateInput.value = dateStr;
-          }
-          if (bookingModal) {
-            if (bookingForm) bookingForm.style.display = 'block';
-            if (bookingSuccessView) bookingSuccessView.style.display = 'none';
-            bookingModal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-          }
+      for (const [slot, label] of [['am', '주간'], ['pm', '야간']]) {
+        const button = document.createElement('button');
+        const unavailable = cellDateObj < todayDateObj || isSlotBooked(dateStr, slot);
+        button.type = 'button';
+        button.className = 'booking-calendar-slot ' + (unavailable ? 'slot-booked' : 'slot-available');
+        button.textContent = `${label} · ${unavailable ? '마감' : '가능'}`;
+        button.disabled = unavailable;
+        button.setAttribute('aria-label', `${dateStr} ${button.textContent}`);
+        button.addEventListener('click', () => {
+          bookingDateInput.value = dateStr;
+          timeDay.checked = slot === 'am';
+          timeNight.checked = slot === 'pm';
+          openBookingModal();
         });
+        dayCell.appendChild(button);
       }
 
       calendarDaysGrid.appendChild(dayCell);

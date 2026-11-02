@@ -497,6 +497,14 @@
           </div>
         </div>
         <div class="form-group">
+          <label for="booking-time-slot">예약 시간대</label>
+          <select id="booking-time-slot" required>
+            <option value="am">주간 (10:00 - 18:00)</option>
+            <option value="pm">야간 (18:00 이후)</option>
+          </select>
+          <p id="booking-slot-status" role="status" style="font-size: 13px; margin-top: 8px;"></p>
+        </div>
+        <div class="form-group">
           <label for="booking-note">추가 요청사항</label>
           <textarea id="booking-note" rows="3" placeholder="기타 필요한 세부 요청사항을 입력해주세요. (예: 마이크 추가, 바베큐 셋업 등)"></textarea>
         </div>
