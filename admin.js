@@ -23,9 +23,27 @@ let rtdbPermissionDenied = false;
 // 관리자 보안 로그인 권한 허용 이메일 목록
 const adminEmails = [
   'edusim71@gmail.com',
+  'wanjunsim3@gmail.com',
   'admin@email.com',
   'admin@sponge.com'
 ];
+
+let currentAdminEmail = '';
+const newAdminEmail = 'wanjunsim3@gmail.com';
+
+function adminDisplay(email) {
+  if (email === newAdminEmail) return { label: '추가 관리자', className: 'owner-new' };
+  if (adminEmails.includes(email)) return { label: '기존 관리자', className: 'owner-existing' };
+  return { label: '등록자 미지정', className: 'owner-unknown' };
+}
+
+function rememberAdmin(email) {
+  currentAdminEmail = email.toLowerCase();
+  localStorage.setItem('admin_logged_in', 'true');
+  localStorage.setItem('admin_email', currentAdminEmail);
+  const badge = document.getElementById('current-admin-email');
+  if (badge) badge.textContent = currentAdminEmail;
+}
 
 try {
   app = initializeApp(firebaseConfig);
@@ -115,7 +133,7 @@ function packReservations(dataObj) {
   return Object.entries(dataObj).map(([key, val]) => {
     if (!val || typeof val !== 'object') return null;
     if (val.name === '[수동 마감]' && val.status === 'confirmed') {
-      return ['M', key, val.date || '', val.createdAt || '', val.timeSlot || ''];
+      return ['M', key, val.date || '', val.createdAt || '', val.timeSlot || '', val.createdByAdmin || ''];
     }
     return [
       'R',
@@ -129,7 +147,8 @@ function packReservations(dataObj) {
       val.note || '',
       val.createdAt || '',
       val.brand || '',
-      val.timeSlot || ''
+      val.timeSlot || '',
+      val.createdByAdmin || ''
     ];
   }).filter(Boolean);
 }
@@ -140,13 +159,14 @@ function unpackReservations(packedList) {
   packedList.forEach((item) => {
     if (!Array.isArray(item)) return;
     if (item[0] === 'M') {
-      const [, key, date, createdAt, timeSlot] = item;
+      const [, key, date, createdAt, timeSlot, createdByAdmin] = item;
       if (key && date) {
         result[key] = {
           name: '[수동 마감]',
           phone: '-',
           date,
           timeSlot: timeSlot || '',
+          createdByAdmin: createdByAdmin || '',
           guests: '0',
           note: '관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.',
           price: '0',
@@ -155,13 +175,14 @@ function unpackReservations(packedList) {
         };
       }
     } else if (item[0] === 'R') {
-      const [, key, date, name, phone, guests, price, status, note, createdAt, brand, timeSlot] = item;
+      const [, key, date, name, phone, guests, price, status, note, createdAt, brand, timeSlot, createdByAdmin] = item;
       if (key && date) {
         result[key] = {
           name: name || '예약자',
           phone: phone || '-',
           date,
           timeSlot: timeSlot || '',
+          createdByAdmin: createdByAdmin || '',
           guests: guests || '0',
           price: price || '0',
           status: status || 'pending',
@@ -334,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (loginForm) {
     loginForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const email = document.getElementById('admin-email').value.trim();
+      const email = document.getElementById('admin-email').value.trim().toLowerCase();
       const password = document.getElementById('admin-password').value;
 
       // 관리자 권한 이메일 여부 1차 필터링
@@ -346,16 +367,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (useFirebase && auth) {
         signInWithEmailAndPassword(auth, email, password)
           .then(() => {
-            localStorage.setItem('admin_logged_in', 'true');
+            rememberAdmin(email);
             alert("🔓 관리자 대시보드 로그인 성공!");
             loginForm.reset();
             loginOverlay.style.display = 'none';
             loadReservations();
           })
           .catch((err) => {
-            if (password === "ㅁㄴ913689" || password === "as913689" || password === "913689") {
+            if (email !== newAdminEmail && (password === "ㅁㄴ913689" || password === "as913689" || password === "913689")) {
               alert("🔓 관리자 대시보드 로그인 성공!");
-              localStorage.setItem('admin_logged_in', 'true');
+              rememberAdmin(email);
               loginForm.reset();
               loginOverlay.style.display = 'none';
               loadReservations();
@@ -364,9 +385,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           });
       } else {
-        if (password === "ㅁㄴ913689" || password === "as913689" || password === "913689") {
+        if (email !== newAdminEmail && (password === "ㅁㄴ913689" || password === "as913689" || password === "913689")) {
           alert("🔓 관리자 대시보드로 진입합니다.");
-          localStorage.setItem('admin_logged_in', 'true');
+          rememberAdmin(email);
           loginOverlay.style.display = 'none';
           loadReservations();
         } else {
@@ -381,6 +402,9 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', () => {
       if (confirm("대시보드에서 로그아웃 하시겠습니까?")) {
         localStorage.removeItem('admin_logged_in');
+        localStorage.removeItem('admin_email');
+        currentAdminEmail = '';
+        if (activeReservationsListener) { activeReservationsListener(); activeReservationsListener = null; }
         if (useFirebase && auth) {
           signOut(auth).finally(() => {
             loginOverlay.style.display = 'flex';
@@ -495,6 +519,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const slotLabel = document.createElement('div');
       slotLabel.textContent = res.timeSlot === 'am' ? '주간' : res.timeSlot === 'pm' ? '야간' : '종일';
       tdDate.appendChild(slotLabel);
+      const owner = adminDisplay(res.createdByAdmin);
+      const ownerLabel = document.createElement('span');
+      ownerLabel.className = `reservation-owner ${owner.className}`;
+      ownerLabel.textContent = owner.label;
+      ownerLabel.title = res.createdByAdmin || '기존 예약 또는 아직 관리자가 확정하지 않은 신청';
+      tdDate.appendChild(ownerLabel);
+      tr.classList.add(owner.className);
       tr.appendChild(tdDate);
 
       // 신청자 (이름)
@@ -609,24 +640,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 5. 예약 확정(status -> confirmed) 변경 트랜잭션
   function confirmReservation(key, date) {
+    if (!currentAdminEmail) { alert('관리자 계정으로 다시 로그인해 주세요.'); return; }
+    const createdByAdmin = latestReservationsData[key]?.createdByAdmin || currentAdminEmail;
     if (confirm(`${date} 예약을 '확정'하시겠습니까?\n확정 시 메인 캘린더에 예약 완료 마감 표시됩니다.`)) {
       if (useFirebase && db && !rtdbPermissionDenied) {
         const targetRef = ref(db, `reservations/${key}`);
-        update(targetRef, { status: "confirmed" })
+        update(targetRef, { status: "confirmed", createdByAdmin })
           .then(() => {
             alert("✅ 해당 예약이 최종 확정되었습니다.");
           })
           .catch((err) => {
             rtdbPermissionDenied = true;
             mutateCloudData((data) => {
-              if (data[key]) data[key].status = "confirmed";
+              if (data[key]) Object.assign(data[key], { status: "confirmed", createdByAdmin: data[key].createdByAdmin || createdByAdmin });
             })
               .then(() => alert("✅ 해당 예약이 최종 확정되었습니다."))
               .catch((e) => alert("확정 실패: " + e.message));
           });
       } else {
         mutateCloudData((data) => {
-          if (data[key]) data[key].status = "confirmed";
+          if (data[key]) Object.assign(data[key], { status: "confirmed", createdByAdmin: data[key].createdByAdmin || createdByAdmin });
         })
           .then(() => alert("✅ 해당 예약이 최종 확정되었습니다."))
           .catch((e) => alert("확정 실패: " + e.message));
@@ -693,7 +726,7 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, (user) => {
       if (user) {
         if (adminEmails.includes(user.email)) {
-          localStorage.setItem('admin_logged_in', 'true');
+          rememberAdmin(user.email);
           loginOverlay.style.display = 'none';
           loadReservations();
         } else {
@@ -702,7 +735,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } else {
         const adminLoggedIn = localStorage.getItem('admin_logged_in');
-        if (adminLoggedIn === 'true') {
+        if (adminLoggedIn === 'true' && adminEmails.includes(localStorage.getItem('admin_email')) && localStorage.getItem('admin_email') !== newAdminEmail) {
+          rememberAdmin(localStorage.getItem('admin_email'));
           loginOverlay.style.display = 'none';
           loadReservations();
         } else {
@@ -716,7 +750,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   } else {
     const adminLoggedIn = localStorage.getItem('admin_logged_in');
-    if (adminLoggedIn === 'true') {
+    if (adminLoggedIn === 'true' && adminEmails.includes(localStorage.getItem('admin_email')) && localStorage.getItem('admin_email') !== newAdminEmail) {
+      rememberAdmin(localStorage.getItem('admin_email'));
       loginOverlay.style.display = 'none';
       loadReservations();
     } else {
@@ -794,6 +829,12 @@ document.addEventListener('DOMContentLoaded', () => {
           : 'status-available');
         slotButton.textContent = `${label} · ${foundBooking ? '마감' : '가능'}`;
         slotButton.setAttribute('aria-label', `${dateStr} ${slotButton.textContent}`);
+        if (foundBooking) {
+          const owner = adminDisplay(foundBooking.createdByAdmin);
+          slotButton.classList.add(owner.className);
+          slotButton.title = `${foundBooking.name === '[수동 마감]' ? '수동 마감' : '예약 확정'} · ${owner.label}`;
+          slotButton.setAttribute('aria-label', `${dateStr} ${slotButton.textContent} · ${owner.label}`);
+        }
         slotButton.disabled = isPast;
         slotButton.addEventListener('click', () => {
           handleAdminCalendarClick(dateStr, foundBooking, isPast, timeSlot);
@@ -829,11 +870,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 수동 마감용 예약 데이터 생성
   function createManualBlockReservation(dateStr, timeSlot) {
+    if (!currentAdminEmail) { alert('관리자 계정으로 다시 로그인해 주세요.'); return; }
     const manualData = {
       name: "[수동 마감]",
       phone: "-",
       date: dateStr,
       timeSlot,
+      createdByAdmin: currentAdminEmail,
       guests: "0",
       note: "관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.",
       price: "0",

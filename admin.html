@@ -350,6 +350,16 @@
       color: var(--text-secondary);
     }
     
+    .reservation-owner { display: inline-block; padding: 3px 7px; margin-top: 5px; border-radius: 5px; font-size: 11px; border: 1px solid currentColor; }
+    .reservation-owner.owner-existing { color: #c4a0ff; }
+    .reservation-owner.owner-new { color: #70baff; }
+    .reservation-owner.owner-unknown { color: #b5aebf; }
+    .calendar-slot.owner-existing { box-shadow: inset 4px 0 #c4a0ff; }
+    .calendar-slot.owner-new { box-shadow: inset 4px 0 #70baff; }
+    .calendar-slot.owner-unknown { box-shadow: inset 4px 0 #b5aebf; }
+    tr.owner-existing td:first-child { border-left: 4px solid #c4a0ff; }
+    tr.owner-new td:first-child { border-left: 4px solid #70baff; }
+    tr.owner-unknown td:first-child { border-left: 4px solid #b5aebf; }
     /* Calendar Cell Styles */
     .calendar-day-cell {
       min-width: 0;
@@ -447,6 +457,7 @@
         </div>
         <button type="submit" class="btn btn-primary btn-block">관리자 대시보드 진입</button>
       </form>
+      <p style="font-size: 13px; margin-top: 16px;">새 관리자 이메일은 먼저 <a href="./">홈페이지에서 회원가입</a>한 뒤 해당 계정의 비밀번호로 로그인해 주세요.</p>
     </div>
   </div>
 
@@ -457,7 +468,7 @@
         <span class="gradient-text">SPONGE</span> ADMIN
       </a>
       <div id="admin-info-badge" style="display: flex; align-items: center; gap: 16px;">
-        <span style="font-size: 14px; font-weight: 600;"><i class="fa-solid fa-user-shield"></i> 관리자(사장님)</span>
+        <span style="font-size: 14px; font-weight: 600;"><i class="fa-solid fa-user-shield"></i> 관리자 <span id="current-admin-email"></span></span>
         <button id="btn-admin-logout" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-right-from-bracket"></i> 로그아웃</button>
       </div>
     </div>
@@ -526,6 +537,12 @@
       </div>
     </section>
 
+    <p style="text-align:center; font-size:13px; margin-bottom:20px;">
+      등록·확정 관리자: <span style="color:#c4a0ff;">● 기존 관리자</span> ·
+      <span style="color:#70baff;">● 추가 관리자 (wanjunsim3@gmail.com)</span> ·
+      <span style="color:#b5aebf;">● 등록자 미지정</span><br>
+      <small>예약 상태는 기존 색상으로, 관리자는 왼쪽 색상 띠로 구분합니다.</small>
+    </p>
     <!-- Reservations Table -->
     <section class="glass-card table-section">
       <div class="section-title-bar">
