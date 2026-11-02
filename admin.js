@@ -115,7 +115,7 @@ function packReservations(dataObj) {
   return Object.entries(dataObj).map(([key, val]) => {
     if (!val || typeof val !== 'object') return null;
     if (val.name === '[수동 마감]' && val.status === 'confirmed') {
-      return ['M', key, val.date || '', val.createdAt || ''];
+      return ['M', key, val.date || '', val.createdAt || '', val.timeSlot || ''];
     }
     return [
       'R',
@@ -128,7 +128,8 @@ function packReservations(dataObj) {
       val.status || 'pending',
       val.note || '',
       val.createdAt || '',
-      val.brand || ''
+      val.brand || '',
+      val.timeSlot || ''
     ];
   }).filter(Boolean);
 }
@@ -139,12 +140,13 @@ function unpackReservations(packedList) {
   packedList.forEach((item) => {
     if (!Array.isArray(item)) return;
     if (item[0] === 'M') {
-      const [, key, date, createdAt] = item;
+      const [, key, date, createdAt, timeSlot] = item;
       if (key && date) {
         result[key] = {
           name: '[수동 마감]',
           phone: '-',
           date,
+          timeSlot: timeSlot || '',
           guests: '0',
           note: '관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.',
           price: '0',
@@ -153,12 +155,13 @@ function unpackReservations(packedList) {
         };
       }
     } else if (item[0] === 'R') {
-      const [, key, date, name, phone, guests, price, status, note, createdAt, brand] = item;
+      const [, key, date, name, phone, guests, price, status, note, createdAt, brand, timeSlot] = item;
       if (key && date) {
         result[key] = {
           name: name || '예약자',
           phone: phone || '-',
           date,
+          timeSlot: timeSlot || '',
           guests: guests || '0',
           price: price || '0',
           status: status || 'pending',
@@ -489,6 +492,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // 예약 희망일자
       const tdDate = document.createElement('td');
       tdDate.innerHTML = `<strong style="color: var(--accent-gold); font-size:15px;">${res.date}</strong>`;
+      const slotLabel = document.createElement('div');
+      slotLabel.textContent = res.timeSlot === 'am' ? '오전' : res.timeSlot === 'pm' ? '오후' : '종일';
+      tdDate.appendChild(slotLabel);
       tr.appendChild(tdDate);
 
       // 신청자 (이름)
@@ -761,7 +767,9 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let day = 1; day <= lastDate; day++) {
       const dayCell = document.createElement('div');
       dayCell.className = 'calendar-day-cell';
-      dayCell.textContent = day;
+      const dayLabel = document.createElement('span');
+      dayLabel.textContent = day;
+      dayCell.appendChild(dayLabel);
 
       const formattedMonth = String(currentMonth + 1).padStart(2, '0');
       const formattedDay = String(day).padStart(2, '0');
@@ -771,38 +779,34 @@ document.addEventListener('DOMContentLoaded', () => {
         dayCell.classList.add('today-cell');
       }
 
-      let foundBooking = null;
-      if (latestReservationsData) {
-        Object.entries(latestReservationsData).forEach(([key, val]) => {
-          if (val && val.date === dateStr && val.status === 'confirmed') {
-            foundBooking = { key, ...val };
-          }
+      const isPast = dateStr < todayStr;
+      for (const [timeSlot, label] of [['am', '오전'], ['pm', '오후']]) {
+        const bookings = Object.entries(latestReservationsData || {})
+          .filter(([, val]) => val && val.date === dateStr && val.status === 'confirmed'
+            && (!val.timeSlot || val.timeSlot === timeSlot))
+          .map(([key, val]) => ({ ...val, key }));
+        // 고객 예약을 우선 표시하여 겹치는 수동 마감 해제로 예약을 숨기지 않는다.
+        const foundBooking = bookings.find(val => val.name !== '[수동 마감]') || bookings[0];
+        const slotButton = document.createElement('button');
+        slotButton.type = 'button';
+        slotButton.className = 'calendar-slot ' + (foundBooking
+          ? foundBooking.name === '[수동 마감]' ? 'status-manual-booked' : 'status-confirmed'
+          : 'status-available');
+        slotButton.textContent = `${label} · ${foundBooking ? '마감' : '가능'}`;
+        slotButton.setAttribute('aria-label', `${dateStr} ${slotButton.textContent}`);
+        slotButton.disabled = isPast;
+        slotButton.addEventListener('click', () => {
+          handleAdminCalendarClick(dateStr, foundBooking, isPast, timeSlot);
         });
+        dayCell.appendChild(slotButton);
       }
-
-      const cellDateObj = new Date(currentYear, currentMonth, day);
-      const todayDateObj = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const isPast = cellDateObj < todayDateObj;
-
-      if (foundBooking) {
-        if (foundBooking.name === '[수동 마감]') {
-          dayCell.classList.add('status-manual-booked');
-        } else {
-          dayCell.classList.add('status-confirmed');
-        }
-      } else {
-        dayCell.classList.add('status-available');
-      }
-
-      dayCell.addEventListener('click', () => {
-        handleAdminCalendarClick(dateStr, foundBooking, isPast);
-      });
 
       adminCalendarDaysGrid.appendChild(dayCell);
     }
   }
 
-  function handleAdminCalendarClick(dateStr, booking, isPast) {
+  function handleAdminCalendarClick(dateStr, booking, isPast, timeSlot) {
+    const label = timeSlot === 'am' ? '오전' : '오후';
     if (isPast) {
       alert("⚠️ 지난 날짜는 수동 예약을 마감하거나 해제하실 수 없습니다.");
       return;
@@ -810,25 +814,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (booking) {
       if (booking.name === '[수동 마감]') {
-        if (confirm(`🔓 [${dateStr}] 날짜의 수동 예약을 해제하시겠습니까?\n해제하시면 다시 일반 고객이 예약할 수 있는 상태로 복원됩니다.`)) {
-          deleteReservationWithoutConfirm(booking.key, dateStr);
+        if (confirm(`🔓 [${dateStr} ${label}] 시간대의 수동 예약을 해제하시겠습니까?\n${booking.timeSlot ? '선택한 시간대의 마감을 해제합니다.' : '기존 종일 마감이므로 오전·오후 모두 해제됩니다.'}`)) {
+          deleteReservationWithoutConfirm(booking.key, dateStr, booking.timeSlot);
         }
       } else {
-        alert(`🚨 [${dateStr}] 날짜는 이미 일반 고객(${booking.name}님) 예약이 최종 확정되어 마감되었습니다.\n\n해제를 원하시는 경우 하단 예약 목록에서 직접 [보류] 또는 [삭제]로 조치해 주세요.`);
+        alert(`🚨 [${dateStr} ${label}] 시간대는 이미 일반 고객(${booking.name}님) 예약이 최종 확정되어 마감되었습니다.\n\n해제를 원하시는 경우 하단 예약 목록에서 직접 [보류] 또는 [삭제]로 조치해 주세요.`);
       }
     } else {
-      if (confirm(`🔒 [${dateStr}] 날짜를 수동으로 예약 마감(차단)하시겠습니까?\n마감 시 메인 홈페이지 달력에서도 '예약 완료'로 블로킹되어 일반 고객 신청이 차단됩니다.`)) {
-        createManualBlockReservation(dateStr);
+      if (confirm(`🔒 [${dateStr} ${label}] 시간대를 수동으로 예약 마감(차단)하시겠습니까?\n선택한 시간대를 마감합니다. 현재 고객용 달력은 날짜 단위이므로 해당 날짜 전체가 예약 완료로 표시됩니다.`)) {
+        createManualBlockReservation(dateStr, timeSlot);
       }
     }
   }
 
   // 수동 마감용 예약 데이터 생성
-  function createManualBlockReservation(dateStr) {
+  function createManualBlockReservation(dateStr, timeSlot) {
     const manualData = {
       name: "[수동 마감]",
       phone: "-",
       date: dateStr,
+      timeSlot,
       guests: "0",
       note: "관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.",
       price: "0",
@@ -878,12 +883,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 알림창 확인 없이 수동 예약 삭제(해제) 처리
-  function deleteReservationWithoutConfirm(key, dateStr) {
+  function deleteReservationWithoutConfirm(key, dateStr, timeSlot) {
     const removeMatchingManual = (data) => {
       delete data[key];
       if (dateStr) {
         Object.keys(data).forEach((k) => {
-          if (data[k] && data[k].date === dateStr && data[k].name === '[수동 마감]') {
+          if (data[k] && data[k].date === dateStr && data[k].name === '[수동 마감]' && (data[k].timeSlot || '') === (timeSlot || '')) {
             delete data[k];
           }
         });

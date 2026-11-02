@@ -352,7 +352,10 @@
     
     /* Calendar Cell Styles */
     .calendar-day-cell {
-      aspect-ratio: 1;
+      min-width: 0;
+      padding: 6px 2px;
+      flex-direction: column;
+      gap: 5px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -363,38 +366,59 @@
       transition: var(--transition-smooth);
       position: relative;
     }
+    .calendar-slot {
+      width: 100%;
+      min-height: 32px;
+      padding: 5px 1px;
+      border-radius: 6px;
+      font: inherit;
+      font-size: clamp(9px, 1.8vw, 12px);
+      cursor: pointer;
+    }
+    .calendar-slot:disabled { opacity: 0.4; cursor: default; }
+    .calendar-slot:focus-visible { outline: 2px solid white; outline-offset: 2px; }
     .calendar-day-cell.empty-cell {
       cursor: default;
       pointer-events: none;
     }
-    .calendar-day-cell.status-available {
+    .calendar-slot.status-available {
       background: rgba(6, 214, 160, 0.05);
       border: 1px solid rgba(6, 214, 160, 0.1);
       color: #06d6a0;
     }
-    .calendar-day-cell.status-available:hover {
+    .calendar-slot.status-available:hover {
       background: rgba(6, 214, 160, 0.2);
       transform: scale(1.05);
     }
-    .calendar-day-cell.status-manual-booked {
+    .calendar-slot.status-manual-booked {
       background: rgba(255, 183, 3, 0.15);
       border: 1px solid rgba(255, 183, 3, 0.3);
       color: var(--accent-gold);
       text-decoration: line-through;
     }
-    .calendar-day-cell.status-manual-booked:hover {
+    .calendar-slot.status-manual-booked:hover {
       background: rgba(255, 183, 3, 0.3);
       transform: scale(1.05);
     }
-    .calendar-day-cell.status-confirmed {
+    .calendar-slot.status-confirmed {
       background: rgba(239, 71, 111, 0.15);
       border: 1px solid rgba(239, 71, 111, 0.3);
       color: #ef476f;
       text-decoration: line-through;
     }
-    .calendar-day-cell.status-confirmed:hover {
+    .calendar-slot.status-confirmed:hover {
       background: rgba(239, 71, 111, 0.3);
       transform: scale(1.05);
+    }
+    @media (max-width: 600px) {
+      .calendar-section { padding: 16px 8px !important; }
+      .calendar-wrapper-container { padding: 10px 4px !important; }
+      .calendar-days-grid, .calendar-weekdays {
+        grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+        gap: 3px !important;
+      }
+      .calendar-legend { flex-wrap: wrap; gap: 10px !important; }
+      .calendar-slot { white-space: nowrap; letter-spacing: -0.5px; }
     }
     .calendar-day-cell.today-cell {
       border: 2px solid var(--text-primary) !important;
@@ -466,7 +490,7 @@
     <section class="glass-card calendar-section" style="padding: 32px; margin-bottom: 40px; max-width: 750px; margin-left: auto; margin-right: auto;">
       <div class="section-title-bar" style="text-align: center; margin-bottom: 24px;">
         <h2>수동 예약 마감 및 해제 (달력)</h2>
-        <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">날짜를 클릭하면 해당 날짜를 즉시 [수동 예약 마감] 처리하거나 마감을 해제할 수 있습니다.</p>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">날짜별 오전·오후 버튼으로 각각 마감하거나 해제할 수 있습니다. 기존 시간대 미지정 예약은 종일로 표시됩니다. 고객용 달력은 날짜 단위로 마감됩니다.</p>
       </div>
       
       <div class="calendar-wrapper-container" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: 16px; padding: 20px;">

@@ -114,7 +114,7 @@ function packReservations(dataObj) {
   return Object.entries(dataObj).map(([key, val]) => {
     if (!val || typeof val !== 'object') return null;
     if (val.name === '[수동 마감]' && val.status === 'confirmed') {
-      return ['M', key, val.date || '', val.createdAt || ''];
+      return ['M', key, val.date || '', val.createdAt || '', val.timeSlot || ''];
     }
     return [
       'R',
@@ -127,7 +127,8 @@ function packReservations(dataObj) {
       val.status || 'pending',
       val.note || '',
       val.createdAt || '',
-      val.brand || ''
+      val.brand || '',
+      val.timeSlot || ''
     ];
   }).filter(Boolean);
 }
@@ -138,12 +139,13 @@ function unpackReservations(packedList) {
   packedList.forEach((item) => {
     if (!Array.isArray(item)) return;
     if (item[0] === 'M') {
-      const [, key, date, createdAt] = item;
+      const [, key, date, createdAt, timeSlot] = item;
       if (key && date) {
         result[key] = {
           name: '[수동 마감]',
           phone: '-',
           date,
+          timeSlot: timeSlot || '',
           guests: '0',
           note: '관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.',
           price: '0',
@@ -152,12 +154,13 @@ function unpackReservations(packedList) {
         };
       }
     } else if (item[0] === 'R') {
-      const [, key, date, name, phone, guests, price, status, note, createdAt, brand] = item;
+      const [, key, date, name, phone, guests, price, status, note, createdAt, brand, timeSlot] = item;
       if (key && date) {
         result[key] = {
           name: name || '예약자',
           phone: phone || '-',
           date,
+          timeSlot: timeSlot || '',
           guests: guests || '0',
           price: price || '0',
           status: status || 'pending',
