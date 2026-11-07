@@ -135,7 +135,7 @@ function packReservations(dataObj) {
   return Object.entries(dataObj).map(([key, val]) => {
     if (!val || typeof val !== 'object') return null;
     if (val.name === '[수동 마감]' && val.status === 'confirmed') {
-      return ['M', key, val.date || '', val.createdAt || '', val.timeSlot || '', val.createdByAdmin || ''];
+      return ['M', key, val.date || '', val.createdAt || '', val.timeSlot || '', val.createdByAdmin || '', val.manualName || '', val.phone || '-', val.note || ''];
     }
     return [
       'R',
@@ -150,7 +150,8 @@ function packReservations(dataObj) {
       val.createdAt || '',
       val.brand || '',
       val.timeSlot || '',
-      val.createdByAdmin || ''
+      val.createdByAdmin || '',
+      val.manualName || ''
     ];
   }).filter(Boolean);
 }
@@ -161,26 +162,28 @@ function unpackReservations(packedList) {
   packedList.forEach((item) => {
     if (!Array.isArray(item)) return;
     if (item[0] === 'M') {
-      const [, key, date, createdAt, timeSlot, createdByAdmin] = item;
+      const [, key, date, createdAt, timeSlot, createdByAdmin, manualName, phone, note] = item;
       if (key && date) {
         result[key] = {
           name: '[수동 마감]',
-          phone: '-',
+          phone: phone || '-',
+          manualName: manualName || '',
           date,
           timeSlot: timeSlot || '',
           createdByAdmin: createdByAdmin || '',
           guests: '0',
-          note: '관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.',
+          note: note ?? '관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.',
           price: '0',
           status: 'confirmed',
           createdAt: createdAt || new Date().toISOString()
         };
       }
     } else if (item[0] === 'R') {
-      const [, key, date, name, phone, guests, price, status, note, createdAt, brand, timeSlot, createdByAdmin] = item;
+      const [, key, date, name, phone, guests, price, status, note, createdAt, brand, timeSlot, createdByAdmin, manualName] = item;
       if (key && date) {
         result[key] = {
           name: name || '예약자',
+          manualName: manualName || '',
           phone: phone || '-',
           date,
           timeSlot: timeSlot || '',
@@ -532,7 +535,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 신청자 (이름)
       const tdUser = document.createElement('td');
-      tdUser.innerHTML = `<div><strong>${res.name}</strong></div>`;
+      const userLabel = document.createElement('strong');
+      userLabel.textContent = res.name === '[수동 마감]' && res.manualName ? `${res.manualName} [수동 마감]` : res.name;
+      tdUser.appendChild(userLabel);
       tr.appendChild(tdUser);
 
       // 연락처
@@ -576,6 +581,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const tdActions = document.createElement('td');
       const actionGroup = document.createElement('div');
       actionGroup.className = 'action-btn-group';
+
+      if (res.name === '[수동 마감]') {
+        const memoBtn = document.createElement('button');
+        memoBtn.className = 'action-btn';
+        memoBtn.textContent = '메모 수정';
+        memoBtn.addEventListener('click', () => openManualBooking(res.date, res.timeSlot, res));
+        actionGroup.appendChild(memoBtn);
+      }
 
       // 승인 확정 버튼
       if (res.status !== 'confirmed') {
@@ -857,30 +870,110 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (booking) {
       if (booking.name === '[수동 마감]') {
-        if (confirm(`🔓 [${dateStr} ${label}] 시간대의 수동 예약을 해제하시겠습니까?\n${booking.timeSlot ? '선택한 시간대의 마감을 해제합니다.' : '기존 종일 마감이므로 주간·야간 모두 해제됩니다.'}`)) {
-          deleteReservationWithoutConfirm(booking.key, dateStr, booking.timeSlot);
-        }
+        openManualBooking(dateStr, booking.timeSlot, booking);
       } else {
         alert(`🚨 [${dateStr} ${label}] 시간대는 이미 일반 고객(${booking.name}님) 예약이 최종 확정되어 마감되었습니다.\n\n해제를 원하시는 경우 하단 예약 목록에서 직접 [보류] 또는 [삭제]로 조치해 주세요.`);
       }
     } else {
-      if (confirm(`🔒 [${dateStr} ${label}] 시간대를 수동으로 예약 마감(차단)하시겠습니까?\n선택한 시간대를 마감합니다. 고객용 달력에서도 선택한 시간대만 예약 완료로 표시됩니다.`)) {
-        createManualBlockReservation(dateStr, timeSlot);
-      }
+      openManualBooking(dateStr, timeSlot);
     }
   }
 
-  // 수동 마감용 예약 데이터 생성
-  function createManualBlockReservation(dateStr, timeSlot) {
+  const manualDialog = document.getElementById('manual-booking-dialog');
+  const manualForm = document.getElementById('manual-booking-form');
+  const manualSave = document.getElementById('manual-booking-save');
+  const manualRelease = document.getElementById('manual-booking-release');
+  const manualError = document.getElementById('manual-booking-error');
+  let manualTarget = null;
+  let savingManual = false;
+
+  function openManualBooking(date, timeSlot, booking = null) {
     if (!currentAdminEmail) { alert('관리자 계정으로 다시 로그인해 주세요.'); return; }
+    manualTarget = { date, timeSlot, booking };
+    manualForm.reset();
+    document.getElementById('manual-booking-name').value = booking?.manualName || '';
+    document.getElementById('manual-booking-phone').value = booking?.phone === '-' ? '' : booking?.phone || '';
+    document.getElementById('manual-booking-note').value = booking?.note || '';
+    document.getElementById('manual-booking-title').textContent = booking ? '수동 예약 메모 수정' : '수동 예약 마감';
+    document.getElementById('manual-booking-summary').textContent = `${date} · ${timeSlot === 'am' ? '주간' : timeSlot === 'pm' ? '야간' : '종일'}`;
+    manualSave.textContent = booking ? '메모 저장' : '마감 저장';
+    manualRelease.hidden = !booking;
+    manualError.textContent = '';
+    manualDialog.showModal();
+  }
+
+  document.getElementById('manual-booking-cancel').addEventListener('click', () => {
+    if (!savingManual) manualDialog.close();
+  });
+  manualDialog.addEventListener('cancel', event => { if (savingManual) event.preventDefault(); });
+  manualRelease.addEventListener('click', () => {
+    if (savingManual || !manualTarget?.booking) return;
+    const { date, timeSlot, booking } = manualTarget;
+    if (confirm(`${date} ${timeSlot === 'am' ? '주간' : timeSlot === 'pm' ? '야간' : '종일'} 수동 마감을 해제하시겠습니까?`)) {
+      manualDialog.close();
+      deleteReservationWithoutConfirm(booking.key, date, timeSlot);
+    }
+  });
+  manualForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (savingManual || !manualTarget || !currentAdminEmail) return;
+    const target = manualTarget;
+    const details = {
+      manualName: document.getElementById('manual-booking-name').value.trim(),
+      phone: document.getElementById('manual-booking-phone').value.trim() || '-',
+      note: document.getElementById('manual-booking-note').value.trim()
+    };
+    savingManual = true;
+    manualSave.disabled = true;
+    manualRelease.disabled = true;
+    try {
+      if (target.booking) {
+        await persistManualBooking(target.booking.key, details, true);
+      } else {
+        await createManualBlockReservation(target.date, target.timeSlot, details);
+      }
+      manualDialog.close();
+    } catch (error) {
+      manualError.textContent = `저장 실패: ${error.message}`;
+    } finally {
+      savingManual = false;
+      manualSave.disabled = false;
+      manualRelease.disabled = false;
+    }
+  });
+
+  async function persistManualBooking(key, data, editing = false) {
+    if (useFirebase && db && !rtdbPermissionDenied) {
+      try {
+        const targetRef = editing ? ref(db, `reservations/${key}`) : push(ref(db, 'reservations'));
+        await (editing ? update(targetRef, data) : set(targetRef, data));
+        return;
+      } catch (_) {
+        rtdbPermissionDenied = true;
+      }
+    }
+    await mutateCloudData(records => {
+      if (editing) {
+        if (!records[key] || records[key].name !== '[수동 마감]') throw new Error('예약이 변경되거나 삭제되었습니다. 새로고침해 주세요.');
+        Object.assign(records[key], data);
+      } else {
+        records[key] = data;
+      }
+    });
+  }
+
+  // 수동 마감용 예약 데이터 생성
+  async function createManualBlockReservation(dateStr, timeSlot, details = {}) {
+    if (!currentAdminEmail) throw new Error('관리자 계정으로 다시 로그인해 주세요.');
     const manualData = {
       name: "[수동 마감]",
-      phone: "-",
+      phone: details.phone || "-",
+      manualName: details.manualName || "",
       date: dateStr,
       timeSlot,
       createdByAdmin: currentAdminEmail,
       guests: "0",
-      note: "관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.",
+      note: details.note ?? "관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.",
       price: "0",
       status: "confirmed",
       createdAt: new Date().toISOString()
@@ -888,43 +981,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const newKey = `manual_${dateStr.replace(/-/g, '')}_${Date.now().toString(36)}`;
 
-    if (useFirebase && db && !rtdbPermissionDenied) {
-      try {
-        const reservationsRef = ref(db, 'reservations');
-        const newResRef = push(reservationsRef);
-        set(newResRef, manualData)
-          .then(() => {
-            alert("🔒 해당 날짜가 수동으로 예약 마감되었습니다.");
-          })
-          .catch(() => {
-            rtdbPermissionDenied = true;
-            mutateCloudData((data) => {
-              data[newKey] = manualData;
-            })
-              .then(() => {
-                alert("🔒 해당 날짜가 수동으로 예약 마감되었습니다.");
-              })
-              .catch((err) => alert("마감 설정 실패: " + err.message));
-          });
-      } catch (err) {
-        rtdbPermissionDenied = true;
-        mutateCloudData((data) => {
-          data[newKey] = manualData;
-        })
-          .then(() => {
-            alert("🔒 해당 날짜가 수동으로 예약 마감되었습니다.");
-          })
-          .catch((e) => alert("마감 설정 실패: " + e.message));
-      }
-    } else {
-      mutateCloudData((data) => {
-        data[newKey] = manualData;
-      })
-        .then(() => {
-          alert("🔒 해당 날짜가 수동으로 예약 마감되었습니다.");
-        })
-        .catch((err) => alert("마감 설정 실패: " + err.message));
-    }
+    await persistManualBooking(newKey, manualData);
   }
 
   // 알림창 확인 없이 수동 예약 삭제(해제) 처리

@@ -114,7 +114,7 @@ function packReservations(dataObj) {
   return Object.entries(dataObj).map(([key, val]) => {
     if (!val || typeof val !== 'object') return null;
     if (val.name === '[수동 마감]' && val.status === 'confirmed') {
-      return ['M', key, val.date || '', val.createdAt || '', val.timeSlot || '', val.createdByAdmin || ''];
+      return ['M', key, val.date || '', val.createdAt || '', val.timeSlot || '', val.createdByAdmin || '', val.manualName || '', val.phone || '-', val.note || ''];
     }
     return [
       'R',
@@ -129,7 +129,8 @@ function packReservations(dataObj) {
       val.createdAt || '',
       val.brand || '',
       val.timeSlot || '',
-      val.createdByAdmin || ''
+      val.createdByAdmin || '',
+      val.manualName || ''
     ];
   }).filter(Boolean);
 }
@@ -140,26 +141,28 @@ function unpackReservations(packedList) {
   packedList.forEach((item) => {
     if (!Array.isArray(item)) return;
     if (item[0] === 'M') {
-      const [, key, date, createdAt, timeSlot, createdByAdmin] = item;
+      const [, key, date, createdAt, timeSlot, createdByAdmin, manualName, phone, note] = item;
       if (key && date) {
         result[key] = {
           name: '[수동 마감]',
-          phone: '-',
+          phone: phone || '-',
+          manualName: manualName || '',
           date,
           timeSlot: timeSlot || '',
           createdByAdmin: createdByAdmin || '',
           guests: '0',
-          note: '관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.',
+          note: note ?? '관리자 페이지 달력에서 수동으로 예약 불가능(마감) 처리한 날짜입니다.',
           price: '0',
           status: 'confirmed',
           createdAt: createdAt || new Date().toISOString()
         };
       }
     } else if (item[0] === 'R') {
-      const [, key, date, name, phone, guests, price, status, note, createdAt, brand, timeSlot, createdByAdmin] = item;
+      const [, key, date, name, phone, guests, price, status, note, createdAt, brand, timeSlot, createdByAdmin, manualName] = item;
       if (key && date) {
         result[key] = {
           name: name || '예약자',
+          manualName: manualName || '',
           phone: phone || '-',
           date,
           timeSlot: timeSlot || '',
