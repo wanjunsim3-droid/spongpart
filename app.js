@@ -20,6 +20,9 @@ let authService = null;
 let db = null;
 let useFirebase = false;
 
+// 예약 신청 시 알림 메일을 받을 Gmail 주소
+const BOOKING_NOTIFY_EMAIL = 'wanjunsim3@gmail.com';
+
 // Firebase 설정 값 유효성 체크 및 초기화
 if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY" && firebaseConfig.apiKey.trim() !== "") {
   try {
@@ -684,6 +687,32 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else {
       appendCloudReservation(newReservationData);
+    }
+
+    // 예약 즉시 Gmail 알림 발송 (FormSubmit)
+    try {
+      const timeLabel = timeSlot === 'am' ? '주간 (10:00 - 18:00)' : '야간 (18:00 이후)';
+      fetch('https://formsubmit.co/ajax/' + BOOKING_NOTIFY_EMAIL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          _subject: `[${brandName}] 새 예약 신청 - ${name}님 ${date} ${timeSlot === 'am' ? '주간' : '야간'}`,
+          _template: 'table',
+          _captcha: 'false',
+          '브랜드': brandName,
+          '예약자': name,
+          '연락처': phone,
+          '이용 날짜': date,
+          '이용 시간대': timeLabel,
+          '이용 인원': `${guests}명`,
+          '예상 금액': `₩${summaryPrice}`,
+          '추가 요청사항': note,
+          '신청 시각': new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+        }),
+        keepalive: true
+      }).catch(err => console.warn('예약 메일 알림 실패:', err));
+    } catch (err) {
+      console.warn('예약 메일 알림 오류:', err);
     }
 
     // 로컬 가상 모드 백업 저장
