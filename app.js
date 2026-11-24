@@ -21,7 +21,7 @@ let db = null;
 let useFirebase = false;
 
 // 예약 신청 시 알림 메일을 받을 Gmail 주소
-const BOOKING_NOTIFY_EMAIL = 'wanjunsim3@gmail.com';
+const BOOKING_NOTIFY_EMAIL = 'edusim71@gmail.com';
 
 // Firebase 설정 값 유효성 체크 및 초기화
 if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY" && firebaseConfig.apiKey.trim() !== "") {
