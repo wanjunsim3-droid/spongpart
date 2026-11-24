@@ -366,6 +366,48 @@ function setupAuthStateListener(callback) {
   }
 }
 
+// =========================================================================
+// 공통 가격 계산 단일 함수 (계산기 & 예약창 일원화)
+// =========================================================================
+export function calculatePrice(dayType, timeType, hours) {
+  const h = parseInt(hours, 10);
+  if (isNaN(h)) return null;
+
+  // ① 주중 주간 — 월~목 / 10:00~18:00 (최소 2시간, 시간당 25,000원)
+  if (dayType === 'weekday' && timeType === 'day') {
+    if (h < 2) return null;
+    return h * 25000;
+  }
+
+  // ② 주중 야간 — 월~목 / 18:00 이후 (최소 3시간, 시간당 50,000원 / 기본 3시간 150,000원)
+  if (dayType === 'weekday' && timeType === 'night') {
+    if (h < 3) return null;
+    return h * 50000;
+  }
+
+  // ③ 주말 주간 — 금~일 / 10:00~18:00 (최소 2시간, 시간당 40,000원 / 기본 2시간 80,000원)
+  if (dayType === 'weekend' && timeType === 'day') {
+    if (h < 2) return null;
+    return h * 40000;
+  }
+
+  // ④ 주말 야간 — 금~일 / 18:00 이후 (최소 6시간, 시간당 50,000원 / 기본 6시간 300,000원)
+  if (dayType === 'weekend' && timeType === 'night') {
+    if (h < 6) return null;
+    return h * 50000;
+  }
+
+  return null;
+}
+
+export function getMinHours(dayType, timeType) {
+  if (dayType === 'weekday') {
+    return timeType === 'day' ? 2 : 3;
+  } else {
+    return timeType === 'day' ? 2 : 6;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
   // =========================================================================
@@ -419,8 +461,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // =========================================================================
-  // 3. Realtime Rental Price Calculator
+  // 3. Realtime Rental Price Calculator & Member 50,000 KRW Discount
   // =========================================================================
+  const MEMBER_DISCOUNT = 50000; // 회원 가입 5만원 특별 할인 혜택
+  let currentAuthUser = null;
+
   const dayWeekday = document.getElementById('day-weekday');
   const dayWeekend = document.getElementById('day-weekend');
   const timeDay = document.getElementById('time-day');
@@ -428,85 +473,100 @@ document.addEventListener('DOMContentLoaded', () => {
   const hoursRange = document.getElementById('rent-hours-range');
   const hoursLabel = document.getElementById('hours-label');
   const priceDisplay = document.getElementById('calculated-price-amount');
+  const calcOriginalPrice = document.getElementById('calc-original-price');
+  const rangeHint = document.querySelector('.range-hint');
+  const calcLockOverlay = document.getElementById('calc-lock-overlay');
   
   const estDayType = document.getElementById('est-day-type');
   const estTimeType = document.getElementById('est-time-type');
   const estHours = document.getElementById('est-hours');
   const modalSummaryPrice = document.getElementById('modal-summary-price');
+  const modalSummaryOption = document.getElementById('modal-summary-option');
+  const modalOriginalPrice = document.getElementById('modal-original-price');
 
-  function calculatePrice() {
-    const isWeekend = dayWeekend.checked;
-    const isNight = timeNight.checked;
+  function updateCalculator() {
+    const dayType = (dayWeekend && dayWeekend.checked) ? 'weekend' : 'weekday';
+    const timeType = (timeNight && timeNight.checked) ? 'night' : 'day';
     const slotSelect = document.getElementById('booking-time-slot');
-    if (slotSelect) slotSelect.value = isNight ? 'pm' : 'am';
+    if (slotSelect) slotSelect.value = timeType === 'night' ? 'pm' : 'am';
     
-    const rangeHint = document.querySelector('.range-hint');
-    let minHours = 2;
-    let hintText = "최소 2시간부터 최대 8시간까지 연장 가능";
+    const minHours = getMinHours(dayType, timeType);
 
-    if (isWeekend) {
-      if (isNight) {
-        minHours = 6;
-        hintText = "주말 야간은 최소 6시간부터 최대 8시간까지 예약 가능합니다.";
+    if (hoursRange) {
+      hoursRange.min = minHours;
+      hoursRange.max = 8;
+      if (parseInt(hoursRange.value, 10) < minHours) {
+        hoursRange.value = minHours;
+      }
+    }
+
+    const hours = hoursRange ? parseInt(hoursRange.value, 10) : minHours;
+    const originalPrice = calculatePrice(dayType, timeType, hours);
+
+    let hintText = "최소 2시간부터 최대 8시간까지 예약 가능";
+    if (dayType === 'weekday') {
+      if (timeType === 'day') {
+        hintText = "주중 주간은 최소 2시간(시간당 25,000원)부터 예약 가능합니다.";
       } else {
-        minHours = 5;
-        hintText = "주말 주간은 기본 5시간(최대 8시간) 대여 요금제가 적용됩니다.";
+        hintText = "주중 야간은 최소 3시간(기본 150,000원 / 추가 시간당 50,000원)부터 예약 가능합니다.";
       }
     } else {
-      if (isNight) {
-        minHours = 3;
-        hintText = "주중 야간은 최소 3시간부터 3시간 단위(15만원)로 예약 가능합니다.";
-      }
-    }
-
-    hoursRange.min = minHours;
-    if (parseInt(hoursRange.value, 10) < minHours) {
-      hoursRange.value = minHours;
-    }
-    rangeHint.textContent = hintText;
-
-    const hours = parseInt(hoursRange.value, 10);
-    let totalPrice = 0;
-    
-    if (!isWeekend) {
-      if (!isNight) {
-        totalPrice = hours * 25000;
-        estTimeType.textContent = "이용 시간대: 주간 (10:00 - 18:00)";
+      if (timeType === 'day') {
+        hintText = "주말 주간은 최소 2시간(기본 80,000원 / 추가 시간당 40,000원)부터 예약 가능합니다.";
       } else {
-        const blocks = Math.ceil(hours / 3);
-        totalPrice = blocks * 150000;
-        estTimeType.textContent = `이용 시간대: 야간 (3시간 단위 요금제, 총 ${blocks}타임 적용)`;
+        hintText = "주말 야간은 최소 6시간(기본 300,000원 / 추가 시간당 50,000원)부터 예약 가능합니다.";
       }
-      estDayType.textContent = "이용 요일: 주중 (월~목)";
+    }
+
+    if (rangeHint) {
+      rangeHint.textContent = hintText;
+    }
+
+    const dayLabel = dayType === 'weekday' ? '주중 (월~목)' : '주말 (금~일)';
+    const timeLabel = timeType === 'day' ? '주간 (10:00 - 18:00)' : '야간 (18:00 이후)';
+
+    if (hoursLabel) {
+      hoursLabel.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> 대여 시간: ${hours}시간`;
+    }
+    if (estDayType) {
+      estDayType.textContent = `이용 요일: ${dayLabel}`;
+    }
+    if (estTimeType) {
+      estTimeType.textContent = `이용 시간대: ${timeLabel}`;
+    }
+    if (estHours) {
+      estHours.textContent = `총 이용 시간: ${hours}시간`;
+    }
+    
+    if (originalPrice === null) {
+      if (priceDisplay) priceDisplay.textContent = '-';
+      if (calcOriginalPrice) calcOriginalPrice.textContent = '-';
+      if (modalSummaryPrice) modalSummaryPrice.textContent = '-';
+      if (modalOriginalPrice) modalOriginalPrice.textContent = '';
+      if (modalSummaryOption) modalSummaryOption.textContent = `해당 시간대의 최소 이용시간은 ${minHours}시간입니다.`;
     } else {
-      if (!isNight) {
-        totalPrice = hours * 36000;
-        estTimeType.textContent = "이용 시간대: 주간 (10:00 - 18:00)";
-      } else {
-        if (hours === 6) {
-          totalPrice = 300000;
-        } else {
-          totalPrice = hours * 50000;
-        }
-        estTimeType.textContent = "이용 시간대: 야간 6시간 자유 이용 (새벽 2시 퇴실)";
+      const finalPrice = Math.max(0, originalPrice - MEMBER_DISCOUNT);
+      const formattedOriginalPrice = originalPrice.toLocaleString('ko-KR');
+      const formattedFinalPrice = finalPrice.toLocaleString('ko-KR');
+
+      if (calcOriginalPrice) calcOriginalPrice.textContent = `₩${formattedOriginalPrice}`;
+      if (priceDisplay) priceDisplay.textContent = formattedFinalPrice;
+      if (modalSummaryPrice) modalSummaryPrice.textContent = formattedFinalPrice;
+      if (modalOriginalPrice) modalOriginalPrice.textContent = `(정상가 ₩${formattedOriginalPrice})`;
+      if (modalSummaryOption) {
+        modalSummaryOption.textContent = `${dayLabel} / ${timeLabel.split(' ')[0]} / ${hours}시간`;
       }
-      estDayType.textContent = "이용 요일: 주말 (금~일)";
     }
-    
-    hoursLabel.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> 대여 시간: ${hours}시간`;
-    estHours.textContent = `총 이용 시간: ${hours}시간`;
-    
-    const formattedPrice = totalPrice.toLocaleString('ko-KR');
-    priceDisplay.textContent = formattedPrice;
-    modalSummaryPrice.textContent = formattedPrice;
   }
 
   [dayWeekday, dayWeekend, timeDay, timeNight].forEach(input => {
-    input.addEventListener('change', calculatePrice);
+    if (input) input.addEventListener('change', updateCalculator);
   });
-  hoursRange.addEventListener('input', calculatePrice);
+  if (hoursRange) {
+    hoursRange.addEventListener('input', updateCalculator);
+  }
 
-  calculatePrice();
+  updateCalculator();
 
   // =========================================================================
   // 4. Booking Modal Toggle & Seamless Submission Flow
@@ -516,8 +576,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const bookingTriggers = document.querySelectorAll('.btn-booking-trigger');
   const bookingForm = document.getElementById('booking-form');
   const bookingSuccessView = document.getElementById('booking-success-view');
-  const bookingClipboardPreview = document.getElementById('booking-clipboard-preview');
-  const btnReCopy = document.getElementById('btn-re-copy');
+  const btnSuccessClose = document.getElementById('btn-success-close');
+  const successUserName = document.getElementById('success-user-name');
+  const successDate = document.getElementById('success-date');
+  const successGuests = document.getElementById('success-guests');
+  const successPrice = document.getElementById('success-price');
 
   const defaultBookedDates = [];
   let dynamicBookedDates = [];
@@ -526,56 +589,32 @@ document.addEventListener('DOMContentLoaded', () => {
     return defaultBookedDates.includes(date) || dynamicBookedDates.includes(`${date}:${slot}`);
   }
   function updateSlotAvailability() {
-    const date = document.getElementById('booking-date').value;
+    if (!bookingTimeSlot) return;
+    const dateInput = document.getElementById('booking-date');
+    if (!dateInput) return;
+    const date = dateInput.value;
     const slot = bookingTimeSlot.value;
-    const past = date < document.getElementById('booking-date').min;
+    const past = date < dateInput.min;
     const unavailable = past || isSlotBooked(date, slot);
     const message = unavailable ? '선택한 날짜와 시간대는 예약이 마감되었습니다.' : '선택한 시간대는 예약 신청이 가능합니다.';
-    document.getElementById('booking-slot-status').textContent = message;
+    const statusEl = document.getElementById('booking-slot-status');
+    if (statusEl) statusEl.textContent = message;
     bookingTimeSlot.setCustomValidity(unavailable ? message : '');
     for (const option of bookingTimeSlot.options) {
       option.textContent = `${option.value === 'am' ? '주간 (10:00 - 18:00)' : '야간 (18:00 이후)'}${isSlotBooked(date, option.value) ? ' · 마감' : ''}`;
     }
   }
-  bookingTimeSlot.addEventListener('change', () => {
-    timeDay.checked = bookingTimeSlot.value === 'am';
-    timeNight.checked = bookingTimeSlot.value === 'pm';
-    calculatePrice();
-    updateSlotAvailability();
-  });
-  [timeDay, timeNight].forEach(input => input.addEventListener('change', updateSlotAvailability));
-
-  function copyTextToClipboard(text) {
-    if (navigator.clipboard && window.isSecureContext) {
-      return navigator.clipboard.writeText(text).catch(() => {
-        return fallbackCopyTextToClipboard(text);
-      });
-    } else {
-      return fallbackCopyTextToClipboard(text);
-    }
-  }
-
-  function fallbackCopyTextToClipboard(text) {
-    return new Promise((resolve, reject) => {
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "fixed";
-      textArea.style.top = "-9999px";
-      textArea.style.left = "-9999px";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      try {
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textArea);
-        if (successful) resolve();
-        else reject(new Error('Copy command failed'));
-      } catch (err) {
-        document.body.removeChild(textArea);
-        reject(err);
-      }
+  if (bookingTimeSlot) {
+    bookingTimeSlot.addEventListener('change', () => {
+      if (timeDay) timeDay.checked = bookingTimeSlot.value === 'am';
+      if (timeNight) timeNight.checked = bookingTimeSlot.value === 'pm';
+      updateCalculator();
+      updateSlotAvailability();
     });
   }
+  [timeDay, timeNight].forEach(input => {
+    if (input) input.addEventListener('change', updateSlotAvailability);
+  });
 
   const bookingDateInput = document.getElementById('booking-date');
   if (bookingDateInput) {
@@ -599,7 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function openBookingModal() {
-    calculatePrice();
+    updateCalculator();
     updateSlotAvailability();
     if (bookingForm) bookingForm.style.display = 'block';
     if (bookingSuccessView) bookingSuccessView.style.display = 'none';
@@ -620,22 +659,15 @@ document.addEventListener('DOMContentLoaded', () => {
     modalCloseBtn.addEventListener('click', closeModal);
   }
 
+  if (btnSuccessClose) {
+    btnSuccessClose.addEventListener('click', closeModal);
+  }
+
   bookingModal.addEventListener('click', (e) => {
     if (e.target === bookingModal) {
       closeModal();
     }
   });
-
-  if (btnReCopy && bookingClipboardPreview) {
-    btnReCopy.addEventListener('click', () => {
-      copyTextToClipboard(bookingClipboardPreview.value).then(() => {
-        alert("📋 예약 신청서가 클립보드에 다시 복사되었습니다!");
-      }).catch(() => {
-        bookingClipboardPreview.select();
-        alert("텍스트를 직접 복사(Ctrl+C)해 주세요.");
-      });
-    });
-  }
 
   bookingForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -649,15 +681,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const isDdanddara = window.location.pathname.includes('ddanddara');
     const brandName = isDdanddara ? '딴따라 공간대여' : '스폰지 파티룸';
 
+    const dayType = (dayWeekend && dayWeekend.checked) ? 'weekend' : 'weekday';
+    const timeType = (timeNight && timeNight.checked) ? 'night' : 'day';
+    const hours = hoursRange ? parseInt(hoursRange.value, 10) : 3;
+    const originalPrice = calculatePrice(dayType, timeType, hours);
+    const minHours = getMinHours(dayType, timeType);
+
+    if (originalPrice === null) {
+      alert(`해당 시간대의 최소 이용시간은 ${minHours}시간입니다.`);
+      return;
+    }
+
+    const finalPrice = Math.max(0, originalPrice - MEMBER_DISCOUNT);
+    const dayLabel = dayType === 'weekday' ? '주중(월~목)' : '주말(금~일)';
+    const timeLabel = timeType === 'day' ? '주간' : '야간';
+    const summaryPrice = finalPrice.toLocaleString('ko-KR');
+    const formattedOriginal = originalPrice.toLocaleString('ko-KR');
+    const optionSummary = `${dayLabel} / ${timeLabel} / ${hours}시간 / ₩${summaryPrice} (5만원 할인적용)`;
+
     const name = document.getElementById('user-name').value;
     const phone = document.getElementById('user-phone').value;
     const date = document.getElementById('booking-date').value;
     const guests = document.getElementById('guest-count').value;
     const note = document.getElementById('booking-note').value || '없음';
-    const summaryPrice = modalSummaryPrice.textContent;
 
-    const timeSlot = bookingTimeSlot.value;
-    if (date < bookingDateInput.min || isSlotBooked(date, timeSlot)) {
+    const timeSlot = bookingTimeSlot ? bookingTimeSlot.value : (timeType === 'night' ? 'pm' : 'am');
+    if (bookingDateInput && (date < bookingDateInput.min || isSlotBooked(date, timeSlot))) {
       alert("⚠️ 선택하신 날짜와 시간대는 예약이 마감되었습니다. 다른 시간대를 선택해 주세요.");
       return;
     }
@@ -667,6 +716,12 @@ document.addEventListener('DOMContentLoaded', () => {
       phone: phone,
       date: date,
       timeSlot,
+      dayType,
+      timeType,
+      hours,
+      optionSummary,
+      originalPrice: formattedOriginal,
+      discount: MEMBER_DISCOUNT,
       guests: guests,
       note: note,
       price: summaryPrice,
@@ -691,21 +746,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 예약 즉시 Gmail 알림 발송 (FormSubmit)
     try {
-      const timeLabel = timeSlot === 'am' ? '주간 (10:00 - 18:00)' : '야간 (18:00 이후)';
+      const fullTimeLabel = timeSlot === 'am' ? '주간 (10:00 - 18:00)' : '야간 (18:00 이후)';
       fetch('https://formsubmit.co/ajax/' + BOOKING_NOTIFY_EMAIL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
-          _subject: `[${brandName}] 새 예약 신청 - ${name}님 ${date} ${timeSlot === 'am' ? '주간' : '야간'}`,
+          _subject: `[${brandName}] 새 예약 신청 - ${name}님 ${date} ${timeSlot === 'am' ? '주간' : '야간'} (${hours}시간)`,
           _template: 'table',
           _captcha: 'false',
           '브랜드': brandName,
           '예약자': name,
           '연락처': phone,
           '이용 날짜': date,
-          '이용 시간대': timeLabel,
+          '이용 조건': `${dayLabel} / ${fullTimeLabel} / ${hours}시간`,
           '이용 인원': `${guests}명`,
-          '예상 금액': `₩${summaryPrice}`,
+          '결제 예상 금액': `₩${summaryPrice} (정상가 ₩${formattedOriginal}, 회원 5만원 할인 적용)`,
           '추가 요청사항': note,
           '신청 시각': new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
         }),
@@ -724,28 +779,17 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
       console.warn("LocalStorage 저장 오류:", e);
     }
-    
-    const clipboardText = `[${brandName} 예약 신청서]
-• 예약자: ${name}님
-• 연락처: ${phone}
-• 이용 날짜: ${date}
-• 이용 시간대: ${timeSlot === 'am' ? '주간' : '야간'}
-• 이용 인원: ${guests}명
-• 예상 금액: ₩${summaryPrice}
-• 추가 요청사항: ${note}
 
-※ 카카오톡 채널 채팅방이 열리면 이 내용을 그대로 붙여넣기(Ctrl+V 또는 꾹 눌러 붙여넣기)하여 전송해 주세요.`;
+    const successOption = document.getElementById('success-option');
+    if (successUserName) successUserName.textContent = name;
+    if (successDate) successDate.textContent = date;
+    if (successOption) successOption.textContent = `${dayLabel} ${timeLabel} ${hours}시간`;
+    if (successGuests) successGuests.textContent = `${guests}명`;
+    if (successPrice) successPrice.textContent = `₩${summaryPrice}`;
 
-    copyTextToClipboard(clipboardText).finally(() => {
-      if (bookingClipboardPreview) {
-        bookingClipboardPreview.value = clipboardText;
-      }
-      bookingForm.style.display = 'none';
-      if (bookingSuccessView) {
-        bookingSuccessView.style.display = 'block';
-      }
-      bookingForm.reset();
-    });
+    if (bookingForm) bookingForm.style.display = 'none';
+    if (bookingSuccessView) bookingSuccessView.style.display = 'block';
+    bookingForm.reset();
   });
 
   // =========================================================================
@@ -764,17 +808,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const userNicknameDisplay = document.getElementById('user-nickname-display');
   const userNameInput = document.getElementById('user-name');
 
-  if (authToggleBtn) {
-    authToggleBtn.addEventListener('click', () => {
+  function openAuthModal() {
+    if (authModal) {
       authModal.classList.add('active');
       document.body.style.overflow = 'hidden';
-    });
+    }
   }
 
   function closeAuthModal() {
-    authModal.classList.remove('active');
-    document.body.style.overflow = '';
+    if (authModal) {
+      authModal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
   }
+
+  if (authToggleBtn) {
+    authToggleBtn.addEventListener('click', openAuthModal);
+  }
+  document.querySelectorAll('.btn-auth-trigger').forEach(btn => {
+    btn.addEventListener('click', openAuthModal);
+  });
+
   if (authCloseBtn) {
     authCloseBtn.addEventListener('click', closeAuthModal);
   }
@@ -818,7 +872,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       registerUser(nickname, email, password)
         .then(() => {
-          alert(`🎉 회원가입 및 로그인이 성공적으로 완료되었습니다!\n${nickname}님, 환영합니다!`);
+          alert(`🎉 축하합니다! 회원가입 완료로 50,000원 추가 할인 혜택이 적용됩니다!\n${nickname}님, 환영합니다!`);
           signupForm.reset();
           closeAuthModal();
         })
@@ -836,7 +890,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       loginUser(email, password)
         .then(() => {
-          alert("🔓 로그인이 완료되었습니다.");
+          alert("🔓 로그인이 완료되었습니다. 50,000원 회원 할인이 적용됩니다.");
           loginForm.reset();
           closeAuthModal();
         })
@@ -858,23 +912,31 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   setupAuthStateListener((user) => {
+    const mobileAuthBtn = document.getElementById('mobile-auth-btn');
     if (user) {
+      currentAuthUser = user;
+      if (calcLockOverlay) calcLockOverlay.classList.add('hidden');
       if (userProfileBadge) userProfileBadge.style.display = 'flex';
       if (userNicknameDisplay) userNicknameDisplay.textContent = user.displayName;
       if (authToggleBtn) authToggleBtn.style.display = 'none';
+      if (mobileAuthBtn) mobileAuthBtn.style.display = 'none';
 
       if (userNameInput) {
         userNameInput.value = user.displayName;
         userNameInput.readOnly = true;
       }
     } else {
+      currentAuthUser = null;
+      if (calcLockOverlay) calcLockOverlay.classList.remove('hidden');
       if (userProfileBadge) userProfileBadge.style.display = 'none';
-      if (authToggleBtn) authToggleBtn.style.display = 'block';
+      if (authToggleBtn) authToggleBtn.style.display = 'inline-flex';
+      if (mobileAuthBtn) mobileAuthBtn.style.display = 'block';
       if (userNameInput) {
         userNameInput.value = '';
         userNameInput.readOnly = false;
       }
     }
+    updateCalculator();
   });
 
   // =========================================================================

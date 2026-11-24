@@ -70,6 +70,7 @@
       <a href="#pricing" class="mobile-nav-item">이용요금</a>
       <a href="#calculator" class="mobile-nav-item">요금 계산기</a>
       <a href="#location" class="mobile-nav-item">오시는 길</a>
+      <button type="button" class="mobile-nav-item btn-auth-trigger" id="mobile-auth-btn" style="background:none; border:none; text-align:left; cursor:pointer; width:100%; color: var(--accent-magenta); font-weight:700;"><i class="fa-solid fa-user-plus"></i> 로그인 / 회원가입 (5만원 할인)</button>
     </div>
   </header>
 
@@ -206,52 +207,68 @@
         <h2>합리적인 대여 요금 안내</h2>
       </div>
       <div class="price-cards">
-        <!-- Card 1 -->
+        <!-- Card 1: 주중 주간 -->
+        <div class="glass-card price-card">
+          <div class="price-header">
+            <h3>주중 주간 대여</h3>
+            <span class="price">₩50,000 <small>/ 기본 2시간</small></span>
+            <p>월~목요일 10:00~18:00 (추가 시 시간당 25,000원)</p>
+          </div>
+          <div class="price-body">
+            <ul>
+              <li><i class="fa-solid fa-circle-check"></i> 낮 시간 세미나, 동호회 모임 최적</li>
+              <li><i class="fa-solid fa-circle-check"></i> 주중(월~목) 주간 타임 전용 (최소 2시간)</li>
+              <li><i class="fa-solid fa-circle-check"></i> 노래방 기기 무제한 무료 이용</li>
+              <li><i class="fa-solid fa-circle-check"></i> 80평 단독 대관 전체 이용</li>
+            </ul>
+          </div>
+        </div>
+        <!-- Card 2: 주중 야간 -->
         <div class="glass-card price-card">
           <div class="price-header">
             <h3>주중 야간 대여</h3>
             <span class="price">₩150,000 <small>/ 기본 3시간</small></span>
-            <p>기본 3시간 15만원 (초과 시 시간당 5만원 추가)</p>
+            <p>월~목요일 18:00 이후 (추가 시 시간당 50,000원)</p>
           </div>
           <div class="price-body">
             <ul>
-              <li><i class="fa-solid fa-circle-check"></i> 월~목요일 밤 전용 요금</li>
-              <li><i class="fa-solid fa-circle-check"></i> 노래방 기기 무료 이용</li>
+              <li><i class="fa-solid fa-circle-check"></i> 월~목요일 밤 전용 프라이빗 파티</li>
+              <li><i class="fa-solid fa-circle-check"></i> 기본 3시간 15만원 (최소 3시간)</li>
               <li><i class="fa-solid fa-circle-check"></i> 주차 1대 무료 지원</li>
               <li><i class="fa-solid fa-circle-check"></i> 80평 단독 대관 전체 이용</li>
             </ul>
           </div>
         </div>
-        <!-- Card 2 -->
+        <!-- Card 3: 주말 주간 -->
+        <div class="glass-card price-card">
+          <div class="price-header">
+            <h3>주말 주간 대여</h3>
+            <span class="price">₩80,000 <small>/ 기본 2시간</small></span>
+            <p>금~일요일 10:00~18:00 (추가 시 시간당 40,000원)</p>
+          </div>
+          <div class="price-body">
+            <ul>
+              <li><i class="fa-solid fa-circle-check"></i> 금~일요일 주간 이용 (최소 2시간)</li>
+              <li><i class="fa-solid fa-circle-check"></i> 기본 2시간 80,000원 (시간당 4만원)</li>
+              <li><i class="fa-solid fa-circle-check"></i> 주말 낮 파티, 생일파티, 가족모임</li>
+              <li><i class="fa-solid fa-circle-check"></i> 노래방 기기 무료 무제한 이용</li>
+            </ul>
+          </div>
+        </div>
+        <!-- Card 4: 주말 야간 -->
         <div class="glass-card price-card highlight">
           <div class="hot-badge">POPULAR</div>
           <div class="price-header">
             <h3>주말 야간 대여</h3>
-            <span class="price">₩300,000 <small>/ 6시간</small></span>
-            <p>야간 6시간 자유 이용 (새벽 2시 이전 퇴실)</p>
+            <span class="price">₩300,000 <small>/ 기본 6시간</small></span>
+            <p>금~일요일 18:00 이후 (추가 시 시간당 50,000원)</p>
           </div>
           <div class="price-body">
             <ul>
               <li><i class="fa-solid fa-circle-check"></i> 금~일요일 밤 프라이빗 올나잇 파티</li>
-              <li><i class="fa-solid fa-circle-check"></i> 노래방 기기 & 앰프 무상 제공</li>
-              <li><i class="fa-solid fa-circle-check"></i> 빔프로젝트 및 미디어 셋업</li>
+              <li><i class="fa-solid fa-circle-check"></i> 기본 6시간 300,000원 (최소 6시간)</li>
+              <li><i class="fa-solid fa-circle-check"></i> 빔프로젝트 및 최고급 음향 셋업</li>
               <li><i class="fa-solid fa-circle-check"></i> 주차 1대 무료 지원</li>
-            </ul>
-          </div>
-        </div>
-        <!-- Card 3 -->
-        <div class="glass-card price-card">
-          <div class="price-header">
-            <h3>주중 주간 대여</h3>
-            <span class="price">₩50,000 <small>/ 2시간 ~</small></span>
-            <p>오후 6시 이전 퇴실 (3시간 7.5만 / 4시간 10만)</p>
-          </div>
-          <div class="price-body">
-            <ul>
-              <li><i class="fa-solid fa-circle-check"></i> 낮 시간 세미나, 동호회 모임 최적</li>
-              <li><i class="fa-solid fa-circle-check"></i> 주중(월~목) 주간 타임 전용</li>
-              <li><i class="fa-solid fa-circle-check"></i> 초고속 무선 인터넷 완비</li>
-              <li><i class="fa-solid fa-circle-check"></i> 외부 다이닝/안주 배달 허용</li>
             </ul>
           </div>
         </div>
@@ -267,48 +284,85 @@
         <h2>실시간 대여 요금 계산기</h2>
         <p>원하는 대여 옵션을 마우스로 조절하여 즉시 대여 비용을 확인해보세요.</p>
       </div>
-      <div class="calculator-grid">
-        <div class="glass-card calc-inputs">
-          <div class="input-group">
-            <label><i class="fa-solid fa-calendar-day"></i> 대여 요일 선택</label>
-            <div class="radio-btn-group">
-              <input type="radio" id="day-weekday" name="rent-day" value="weekday" checked>
-              <label for="day-weekday">주중 (월~목)</label>
-              <input type="radio" id="day-weekend" name="rent-day" value="weekend">
-              <label for="day-weekend">주말 (금~일)</label>
-            </div>
-          </div>
-          <div class="input-group">
-            <label><i class="fa-solid fa-clock"></i> 대여 시간대 선택</label>
-            <div class="radio-btn-group">
-              <input type="radio" id="time-day" name="rent-time" value="day" checked>
-              <label for="time-day">주간 (10:00 - 18:00)</label>
-              <input type="radio" id="time-night" name="rent-time" value="night">
-              <label for="time-night">야간 (18:00 - 24:00+)</label>
-            </div>
-          </div>
-          <div class="input-group">
-            <label id="hours-label"><i class="fa-solid fa-hourglass-half"></i> 대여 시간: 3시간</label>
-            <input type="range" id="rent-hours-range" min="2" max="8" value="3" class="slider">
-            <div class="range-hint">최소 2시간부터 최대 8시간까지 연장 가능</div>
+
+      <!-- 5만원 추가 할인 이벤트 안내 배너 -->
+      <div class="discount-event-banner">
+        <div class="event-tag"><i class="fa-solid fa-gift"></i> EVENT</div>
+        <div class="event-text">
+          <strong>🎉 신규 회원 가입 즉시 50,000원 추가 파격 할인!</strong>
+          <span>회원 가입 및 로그인 후 실시간 요금 계산기를 사용하시면 <strong>모든 요금제에서 5만원이 즉시 자동 할인</strong>됩니다.</span>
+        </div>
+      </div>
+
+      <div class="calculator-grid-wrapper">
+        <!-- 비로그인 시 노출되는 잠금 오버레이 -->
+        <div id="calc-lock-overlay" class="calc-lock-overlay">
+          <div class="lock-card glass-card">
+            <div class="lock-icon"><i class="fa-solid fa-lock"></i></div>
+            <h3>회원 전용 요금 계산기</h3>
+            <p>
+              간편 회원가입을 완료하시면 요금 계산기 사용이 가능하며,<br>
+              <strong style="color: var(--accent-gold); font-size: 15px;">🎉 50,000원 즉시 할인 혜택</strong>이 전 예약에 자동 적용됩니다!
+            </p>
+            <button type="button" class="btn btn-primary btn-auth-trigger" id="btn-calc-auth-trigger">
+              <i class="fa-solid fa-user-plus"></i> 간편 회원가입 / 로그인하고 5만원 할인받기
+            </button>
           </div>
         </div>
-        <div class="glass-card calc-result">
-          <div class="calc-result-header">
-            <h3>나의 예상 견적</h3>
-            <p>실시간으로 집계된 이용 금액입니다.</p>
+
+        <div class="calculator-grid">
+          <div class="glass-card calc-inputs">
+            <div class="input-group">
+              <label><i class="fa-solid fa-calendar-day"></i> 대여 요일 선택</label>
+              <div class="radio-btn-group">
+                <input type="radio" id="day-weekday" name="rent-day" value="weekday" checked>
+                <label for="day-weekday">주중 (월~목)</label>
+                <input type="radio" id="day-weekend" name="rent-day" value="weekend">
+                <label for="day-weekend">주말 (금~일)</label>
+              </div>
+            </div>
+            <div class="input-group">
+              <label><i class="fa-solid fa-clock"></i> 대여 시간대 선택</label>
+              <div class="radio-btn-group">
+                <input type="radio" id="time-day" name="rent-time" value="day" checked>
+                <label for="time-day">주간 (10:00 - 18:00)</label>
+                <input type="radio" id="time-night" name="rent-time" value="night">
+                <label for="time-night">야간 (18:00 이후)</label>
+              </div>
+            </div>
+            <div class="input-group">
+              <label id="hours-label"><i class="fa-solid fa-hourglass-half"></i> 대여 시간: 3시간</label>
+              <input type="range" id="rent-hours-range" min="2" max="8" value="3" class="slider">
+              <div class="range-hint">최소 2시간부터 최대 8시간까지 연장 가능</div>
+            </div>
           </div>
-          <div class="calc-result-body">
-            <div class="price-display">
-              <span class="currency">₩</span>
-              <span id="calculated-price-amount" class="amount">100,000</span>
+          <div class="glass-card calc-result">
+            <div class="calc-result-header">
+              <h3>나의 예상 견적</h3>
+              <p>실시간으로 집계된 이용 금액입니다.</p>
             </div>
-            <div class="estimate-details">
-              <p id="est-day-type">이용 요일: 주중 (월~목)</p>
-              <p id="est-time-type">이용 시간대: 주간</p>
-              <p id="est-hours">총 이용 시간: 3시간</p>
+            <div class="calc-result-body">
+              <div class="price-calc-container">
+                <div class="original-price-row" id="original-price-row">
+                  <span>정상 요금:</span>
+                  <span class="strikethrough" id="calc-original-price">₩75,000</span>
+                </div>
+                <div class="discount-row" id="calc-discount-row">
+                  <span class="discount-badge"><i class="fa-solid fa-tag"></i> 회원가입 특별할인</span>
+                  <span class="discount-amount">-₩50,000</span>
+                </div>
+                <div class="price-display">
+                  <span class="currency">₩</span>
+                  <span id="calculated-price-amount" class="amount">25,000</span>
+                </div>
+              </div>
+              <div class="estimate-details">
+                <p id="est-day-type">이용 요일: 주중 (월~목)</p>
+                <p id="est-time-type">이용 시간대: 주간 (10:00 - 18:00)</p>
+                <p id="est-hours">총 이용 시간: 3시간</p>
+              </div>
+              <button class="btn btn-primary btn-block btn-booking-trigger">이 조건으로 바로 예약</button>
             </div>
-            <button class="btn btn-primary btn-block btn-booking-trigger">이 조건으로 바로 예약</button>
           </div>
         </div>
       </div>
@@ -398,11 +452,6 @@
             <h3><i class="fa-solid fa-phone-volume"></i> 예약 및 안내 문의</h3>
             <p class="phone-number">010-8280-8245</p>
             <p>운영시간: 연중무휴 24시간 영업</p>
-            <div style="margin-top: 12px;">
-              <a href="https://pf.kakao.com/_jxjGxgn/chat" target="_blank" rel="noopener noreferrer" class="btn btn-kakao btn-sm">
-                <i class="fa-solid fa-comment"></i> 카카오톡 1:1 상담 바로가기
-              </a>
-            </div>
           </div>
         </div>
       </div>
@@ -460,19 +509,12 @@
         <p>Copyright © 2026 Gwangmyeong Cheolsan Sponge Partyroom. All rights reserved.</p>
       </div>
       <div class="footer-right">
-        <a href="https://pf.kakao.com/_jxjGxgn/chat" target="_blank" rel="noopener noreferrer" class="social-icon" title="카카오톡 상담"><i class="fa-solid fa-comment"></i></a>
         <a href="https://www.instagram.com/wanjun710/" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="wanjun710 인스타그램"><i class="fa-brands fa-instagram"></i></a>
         <a href="#" class="social-icon"><i class="fa-solid fa-blog"></i></a>
         <a href="#" class="social-icon"><i class="fa-solid fa-envelope"></i></a>
       </div>
     </div>
   </footer>
-
-  <!-- KakaoTalk Floating Button -->
-  <a href="https://pf.kakao.com/_jxjGxgn/chat" target="_blank" rel="noopener noreferrer" class="kakao-floating-btn" id="kakao-channel-floating-btn" aria-label="카카오톡 1:1 상담">
-    <i class="fa-solid fa-comment"></i>
-    <span>카톡 문의</span>
-  </a>
 
   <!-- Booking Modal -->
   <div id="booking-modal" class="modal-overlay">
@@ -537,30 +579,42 @@
           </div>
         </div>
         <div class="booking-summary-box">
-          <p>선택된 예약 예상 요금: <strong>₩<span id="modal-summary-price">100,000</span></strong></p>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;">
+            <i class="fa-solid fa-clock"></i> 선택된 조건: <strong id="modal-summary-option" style="color: #fff;">주중 (월~목) / 주간 (10:00~18:00) / 3시간</strong>
+          </div>
+          <div id="modal-discount-info" style="display: flex; justify-content: space-between; font-size: 13px; color: #06d6a0; margin-bottom: 6px;">
+            <span><i class="fa-solid fa-gift"></i> 회원가입 특별할인 이벤트</span>
+            <span style="font-weight: 700;">-₩50,000</span>
+          </div>
+          <p>선택된 예약 예상 요금: <strong>₩<span id="modal-summary-price">25,000</span></strong> <small id="modal-original-price" style="text-decoration: line-through; color: var(--text-secondary); font-size: 13px; font-weight: normal; margin-left: 6px;">(정상가 ₩75,000)</small></p>
         </div>
         <button type="submit" id="btn-submit-booking" class="btn btn-primary btn-block">예약 확정 및 신청</button>
       </form>
 
       <!-- Booking Success View -->
       <div id="booking-success-view" style="display: none; text-align: center; padding: 10px 0;">
-        <div style="font-size: 48px; color: #ffd166; margin-bottom: 12px;">
+        <div style="font-size: 52px; color: #06d6a0; margin-bottom: 12px;">
           <i class="fa-solid fa-circle-check"></i>
         </div>
         <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 8px;">예약 신청이 <span class="gradient-text">완료</span>되었습니다!</h2>
-        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px; line-height: 1.5;">
-          아래 예약 정보가 <strong style="color: #ffd166;">클립보드에 복사</strong>되었습니다.<br>
-          아래 카카오톡 버튼을 눌러 채팅창에 <span style="color: var(--accent-magenta); font-weight: 700;">붙여넣기(Ctrl+V)</span> 후 전송해 주세요!
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; line-height: 1.6;">
+          <strong style="color: #ffd166;" id="success-user-name">고객</strong>님의 예약 내역이 안전하게 접수되었습니다.<br>
+          담당자가 확인 후 연락처로 최종 안내를 드립니다.
         </p>
-        <div style="margin-bottom: 16px; text-align: left;">
-          <textarea id="booking-clipboard-preview" readonly style="width: 100%; height: 125px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; padding: 10px; font-size: 13px; resize: none; font-family: inherit;"></textarea>
-          <button type="button" id="btn-re-copy" class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 8px;">
-            <i class="fa-regular fa-copy"></i> 예약 내용 다시 복사하기
+
+        <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: left; font-size: 13px; line-height: 1.8;">
+          <div><strong>📅 이용 날짜:</strong> <span id="success-date" style="color: #fff;">-</span></div>
+          <div><strong>⏰ 이용 조건:</strong> <span id="success-option" style="color: #fff;">-</span></div>
+          <div><strong>👥 이용 인원:</strong> <span id="success-guests" style="color: #fff;">-</span></div>
+          <div><strong>💳 결제 금액:</strong> <span id="success-price" style="color: var(--accent-gold); font-weight: 700;">-</span> <span id="success-discount-tag" style="color: #06d6a0; font-size: 12px; font-weight: 600; margin-left: 6px;">(회원 5만원 할인 적용)</span></div>
+          <div style="margin-top: 6px; font-size: 12px; color: var(--text-secondary);">※ 운영자(010-8280-8245) 확인 후 최종 안내를 드립니다.</div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="button" id="btn-success-close" class="btn btn-secondary" style="flex: 1; justify-content: center;">
+            확인 닫기
           </button>
         </div>
-        <a href="https://pf.kakao.com/_jxjGxgn/chat" id="btn-go-kakao" target="_blank" rel="noopener noreferrer" class="btn btn-kakao btn-block" style="font-size: 16px; padding: 14px 20px;">
-          <i class="fa-solid fa-comment"></i> 카카오톡 대화방 열기
-        </a>
       </div>
     </div>
   </div>
